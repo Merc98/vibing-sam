@@ -77,8 +77,11 @@ class MainViewModel(
     }
 
     private fun loadAvailableModels() {
-        _availableModels.value = aiRepository.getAvailableModels()
-        _selectedModel.value = _availableModels.value.firstOrNull()
+        val models = aiRepository.getAvailableModels()
+        _availableModels.value = models
+        _selectedModel.value = models.firstOrNull { it.type == AIModelType.LOCAL_SMART_ASSIST }
+            ?: models.firstOrNull { it.type == AIModelType.LOCAL_QUICK_HELP }
+            ?: models.firstOrNull()
     }
 
     fun createNewProject(name: String) {
