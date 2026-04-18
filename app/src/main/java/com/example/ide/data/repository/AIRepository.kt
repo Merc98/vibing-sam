@@ -39,6 +39,10 @@ class AIRepository {
     ): Result<String> {
         return try {
             when (model) {
+                AIModelType.LOCAL_SMART_ASSIST,
+                AIModelType.LOCAL_QUICK_HELP -> {
+                    sendLocalFreeAssistantMessage(model, messages)
+                }
                 AIModelType.OPENAI_GPT4, AIModelType.OPENAI_GPT35 -> {
                     sendOpenAIMessage(model, apiKey, messages)
                 }
@@ -67,6 +71,34 @@ class AIRepository {
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun sendLocalFreeAssistantMessage(
+        model: AIModelType,
+        messages: List<ChatMessage>
+    ): Result<String> {
+        val userPrompt = messages.lastOrNull { it.role == "user" }?.content?.trim().orEmpty()
+        if (userPrompt.isBlank()) {
+            return Result.failure(Exception("Please provide a message first"))
+        }
+
+        val assistantName = when (model) {
+            AIModelType.LOCAL_QUICK_HELP -> "Quick Help"
+            else -> "Smart Assist"
+        }
+
+        val response = buildString {
+            append("[$assistantName - Free & local]\n")
+            append("I can help without API keys. Here's a simple plan:\n")
+            append("1) Clarify the expected output.\n")
+            append("2) Implement the smallest working change.\n")
+            append("3) Test and iterate.\n\n")
+            append("Your request summary:\n")
+            append(userPrompt.take(700))
+            if (userPrompt.length > 700) append("...")
+        }
+
+        return Result.success(response)
     }
 
     private suspend fun sendOpenAIMessage(
@@ -258,6 +290,18 @@ class AIRepository {
 
     fun getAvailableModels(): List<AIModel> {
         return listOf(
+            AIModel(
+                AIModelType.LOCAL_SMART_ASSIST,
+                "Local Smart Assist (Free)",
+                "A built-in offline helper that works without API keys",
+                false
+            ),
+            AIModel(
+                AIModelType.LOCAL_QUICK_HELP,
+                "Local Quick Help (Free)",
+                "Fast built-in suggestions for code tasks (no API key)",
+                false
+            ),
             AIModel(AIModelType.OPENAI_GPT4, "GPT-4", "OpenAI's most capable model", true),
             AIModel(AIModelType.OPENAI_GPT35, "GPT-3.5 Turbo", "Fast and efficient OpenAI model", true),
             AIModel(AIModelType.CLAUDE_3_OPUS, "Claude 3 Opus", "Anthropic's most powerful model", true),

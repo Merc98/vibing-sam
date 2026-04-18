@@ -1,6 +1,10 @@
 package com.example.ide.data.model
 
+import com.google.gson.annotations.SerializedName
+
 enum class AIModelType {
+    LOCAL_SMART_ASSIST,
+    LOCAL_QUICK_HELP,
     OPENAI_GPT4,
     OPENAI_GPT35,
     CLAUDE_3_OPUS,
@@ -43,6 +47,7 @@ data class ChatMessage(
 data class ChatRequest(
     val model: String,
     val messages: List<ChatMessage>,
+    @SerializedName("max_tokens")
     val maxTokens: Int = 4096,
     val temperature: Double = 0.7,
     val stream: Boolean = false
@@ -58,12 +63,16 @@ data class ChatResponse(
 data class Choice(
     val index: Int = 0,
     val message: ChatMessage? = null,
+    @SerializedName("finish_reason")
     val finishReason: String? = null
 )
 
 data class Usage(
+    @SerializedName("prompt_tokens")
     val promptTokens: Int = 0,
+    @SerializedName("completion_tokens")
     val completionTokens: Int = 0,
+    @SerializedName("total_tokens")
     val totalTokens: Int = 0
 )
 
