@@ -1,5 +1,6 @@
 package com.example.ide.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,6 +9,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +29,7 @@ fun ChatScreen(viewModel: MainViewModel) {
     val selectedModel by viewModel.selectedModel.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentFile by viewModel.currentFile.collectAsStateWithLifecycle()
+    val commandOptions by viewModel.chatCommandOptions.collectAsStateWithLifecycle()
     
     var messageText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -39,12 +43,29 @@ fun ChatScreen(viewModel: MainViewModel) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    val backgroundBrush = remember {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color(0xFF040B16),
+                Color(0xFF08142A),
+                Color(0xFF0B1B31)
+            )
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundBrush)
+    ) {
         // Header with model info and current file
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0x99132745)
+            )
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -56,14 +77,15 @@ fun ChatScreen(viewModel: MainViewModel) {
                 ) {
                     Column {
                         Text(
-                            text = "AI Assistant",
+                            text = "VibeCode AI",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFD21F)
                         )
                         Text(
                             text = selectedModel?.name ?: "No model selected",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = Color(0xFF8DA9CC)
                         )
                     }
                     
@@ -85,7 +107,7 @@ fun ChatScreen(viewModel: MainViewModel) {
                         Text(
                             text = "Working on: ${file.name} (${file.language})",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = Color(0xFFB8D4FF)
                         )
                     }
                 }
@@ -120,12 +142,12 @@ fun ChatScreen(viewModel: MainViewModel) {
                             Text(
                                 "Start a conversation",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.outline
+                                color = Color(0xFFB8D4FF)
                             )
                             Text(
                                 "Ask questions about your code or get help with programming",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline
+                                color = Color(0xFF8DA9CC)
                             )
                         }
                     }
@@ -196,16 +218,57 @@ fun ChatScreen(viewModel: MainViewModel) {
                     }
                 }
                 
+                val filteredCommands = remember(messageText, commandOptions) {
+                    if (!messageText.startsWith("/")) {
+                        emptyList()
+                    } else {
+                        val query = messageText.trim().lowercase()
+                        commandOptions.filter {
+                            query == "/" || it.command.startsWith(query)
+                        }.take(5)
+                    }
+                }
+
+                if (filteredCommands.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        filteredCommands.forEach { cmd ->
+                            AssistChip(
+                                onClick = { messageText = "${cmd.command} " },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = Color(0xFF14253F),
+                                    labelColor = Color(0xFFE2EEFF)
+                                ),
+                                label = {
+                                    Text("${cmd.command} • ${cmd.description}")
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Row(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     OutlinedTextField(
                         value = messageText,
                         onValueChange = { messageText = it },
-                        placeholder = { Text("Ask about your code or get programming help...") },
+                        placeholder = { Text("Type a message or '/' for quick actions...") },
                         modifier = Modifier.weight(1f),
                         maxLines = 4,
-                        enabled = !uiState.isLoading
+                        enabled = !uiState.isLoading,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF0F223B),
+                            unfocusedContainerColor = Color(0xFF0F223B),
+                            focusedTextColor = Color(0xFFEAF3FF),
+                            unfocusedTextColor = Color(0xFFEAF3FF),
+                            focusedBorderColor = Color(0xFF3F7BC3),
+                            unfocusedBorderColor = Color(0xFF24466F)
+                        )
                     )
                     
                     Spacer(modifier = Modifier.width(8.dp))
@@ -213,13 +276,13 @@ fun ChatScreen(viewModel: MainViewModel) {
                     FloatingActionButton(
                         onClick = {
                             if (messageText.isNotBlank()) {
-                                viewModel.sendChatMessage(messageText.trim())
+                                viewModel.submitChatInput(messageText.trim())
                                 messageText = ""
                             }
                         },
                         modifier = Modifier.size(48.dp),
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = Color(0xFFFFD21F),
+                        contentColor = Color(0xFF031126)
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
@@ -230,6 +293,20 @@ fun ChatScreen(viewModel: MainViewModel) {
                         } else {
                             Icon(Icons.Default.Send, contentDescription = "Send")
                         }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("/refactor", "/debug", "/test", "/insert_script").forEach { action ->
+                        SuggestionChip(
+                            onClick = { messageText = action },
+                            label = { Text(action) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = Color(0xFF111F35),
+                                labelColor = Color(0xFFFFD21F)
+                            )
+                        )
                     }
                 }
             }

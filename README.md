@@ -52,6 +52,7 @@ Connect with the world's most powerful AI models for real-time coding assistance
 - **Smart Language Detection**: Automatically assigns correct file extensions
 - **Real-time Conversation**: Interactive chat with multiple AI models
 - **Error Handling**: Robust error management and user feedback
+- **Slash Commands**: Type `/` in chat for quick actions (`/models`, `/model`, `/settings`, `/insert_script`, `/refactor`, `/debug`, `/test`)
 
 ### 🎨 Modern Mobile UI
 - **Material Design 3**: Clean, intuitive interface following latest design guidelines
@@ -124,6 +125,12 @@ To unlock AI features, configure API keys in the Settings panel:
 4. Ask coding questions or request help with current file
 5. Save useful code snippets with one tap
 
+#### Chat Quick Actions
+- Type `/` to open in-chat command suggestions
+- Use `/model <name>` to switch AI model without leaving chat
+- Use `/insert_script` to insert a safe automation template directly into the current project
+- Use `/refactor`, `/debug`, and `/test` to trigger fast coding-assistant flows
+
 ### 💾 File Operations
 - **Auto-save**: Files automatically saved to project folders
 - **Export**: Download button saves to Downloads folder
@@ -170,6 +177,48 @@ app/src/main/java/com/example/ide/
 - [ ] **Advanced Debugging** - Integrated debugging tools
 - [ ] **Terminal Emulator** - Built-in command line interface
 - [ ] **Cloud Sync** - Sync projects across devices
+
+## 🧪 Vibing APK Lab (Safe Inspector)
+For security testing and debugging on apps you own (or are explicitly authorized to assess), this repo includes:
+
+`tools/vibing_apk_lab.py`
+
+What it does:
+- Validates if local reverse-engineering/build tools are installed (`apktool`, `jadx`, `zipalign`, `apksigner`, `java`, `adb`)
+- Inspects APK structure (manifest presence, dex files, ABIs, resources count)
+- Optionally exports decode/decompile outputs into a local workspace for manual review
+- Generates a machine-readable `report.json`
+- Can list installed packages via ADB and inspect package metadata (`version`, `debuggable` flag, install paths)
+
+What it does **not** do:
+- No payload injection
+- No smali auto-hooking
+- No bypass/cracking routines
+
+Example:
+```bash
+python tools/vibing_apk_lab.py ./my_app.apk --decode --decompile
+python tools/vibing_apk_lab.py --list-packages
+python tools/vibing_apk_lab.py --package com.example.app
+```
+
+Private scope declaration:
+- `docs/DECLARACION_PROYECTO_PRIVADO.md`
+
+## 📦 APK in GitHub (CI Build)
+This repo now includes an Actions workflow:
+`.github/workflows/android-apk.yml`
+
+What it does:
+- Builds **Debug APK** automatically on push (`main` / `work`)
+- Supports manual run (`workflow_dispatch`) with option for `debug` or `release`
+- Uploads generated APK as GitHub Actions artifact
+
+How to use:
+1. Open **GitHub > Actions > Android APK Build**
+2. Click **Run workflow**
+3. Choose `debug` or `release`
+4. Download artifact: `app-debug-apk` or `app-release-apk`
 
 ## 🤝 Contributing
 We welcome contributions from the community! Here's how you can help:

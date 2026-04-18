@@ -12,15 +12,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = NeonYellow,
+    secondary = NeonBlue,
+    tertiary = Purple80,
+    background = DeepNavy,
+    surface = SurfaceNavy,
+    surfaceVariant = SurfaceNavyAlt,
+    onPrimary = DeepNavy,
+    onSecondary = DeepNavy,
+    onBackground = TextPrimaryDark,
+    onSurface = TextPrimaryDark,
+    outline = TextMutedDark
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
-    tertiary = Pink40
+    tertiary = Pink40,
+    background = androidx.compose.ui.graphics.Color(0xFFF6F8FC),
+    surface = androidx.compose.ui.graphics.Color.White,
+    surfaceVariant = androidx.compose.ui.graphics.Color(0xFFEFF2F8)
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -37,7 +48,7 @@ private val LightColorScheme = lightColorScheme(
 fun IdeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -53,6 +64,7 @@ fun IdeTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = AppShapes,
         content = content
     )
 }

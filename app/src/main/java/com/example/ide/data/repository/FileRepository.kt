@@ -7,8 +7,25 @@ import com.example.ide.data.model.FileExtension
 import com.example.ide.data.model.Project
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileWriter
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+
+data class PatchBundle(
+    val fileName: String,
+    val absolutePath: String,
+    val patchFileCount: Int,
+    val sizeBytes: Long,
+    val lastModified: Long,
+    val detectedLanguage: String,
+    val recommendedTool: String,
+    val toolUtility: String,
+    val utilitySummary: String,
+    val isCompatibleWithCurrentProject: Boolean,
+    val compatibilityMessage: String
+)
 
 class FileRepository(
     private val context: Context
@@ -18,11 +35,15 @@ class FileRepository(
     
     // Create a projects directory in Downloads
     private val projectsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "IDEProjects")
+    private val patchBundlesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "IDEPatches")
     
     init {
         // Ensure the projects directory exists
         if (!projectsDir.exists()) {
             projectsDir.mkdirs()
+        }
+        if (!patchBundlesDir.exists()) {
+            patchBundlesDir.mkdirs()
         }
     }
     
@@ -35,22 +56,7 @@ class FileRepository(
         } else {
             projects.add(project)
         }
-        
-        // Keep only the most recent project (limit to 1)
-        if (projects.size > 1) {
-            // Sort by last modified date and keep only the most recent
-            projects.sortByDescending { it.lastModified }
-            // Remove all but the first (most recent) project
-            while (projects.size > 1) {
-                val projectToRemove = projects.removeAt(1)
-                // Delete the project directory from file system
-                val projectDir = File(projectsDir, projectToRemove.name)
-                if (projectDir.exists()) {
-                    deleteRecursively(projectDir)
-                }
-            }
-        }
-        
+
         saveProjects(projects)
         
         // Save the project files to the project directory
@@ -278,6 +284,268 @@ body {
             }
         }
         file.delete()
+    }
+
+    fun listPatchBundles(currentProject: Project? = null): List<PatchBundle> {
+        if (!patchBundlesDir.exists()) return emptyList()
+        val zipFiles = patchBundlesDir.listFiles { file ->
+            file.isFile && file.name.endsWith(".zip", ignoreCase = true)
+        }?.toList().orEmpty()
+
+        return zipFiles.map { zipFile ->
+            val analysis = analyzePatchBundle(zipFile)
+            val compatibility = evaluateCompatibility(currentProject, analysis.extensions)
+            PatchBundle(
+                fileName = zipFile.name,
+                absolutePath = zipFile.absolutePath,
+                patchFileCount = countZipFileEntries(zipFile),
+                sizeBytes = zipFile.length(),
+                lastModified = zipFile.lastModified(),
+                detectedLanguage = analysis.detectedLanguage,
+                recommendedTool = analysis.recommendedTool,
+                toolUtility = analysis.toolUtility,
+                utilitySummary = analysis.utilitySummary,
+                isCompatibleWithCurrentProject = compatibility.first,
+                compatibilityMessage = compatibility.second
+            )
+        }.sortedByDescending { it.lastModified }
+    }
+
+    fun applyPatchBundleToProject(project: Project, zipFileName: String): Result<Int> {
+        val zipFile = File(patchBundlesDir, zipFileName)
+        if (!zipFile.exists()) {
+            return Result.failure(Exception("Patch bundle not found: $zipFileName"))
+        }
+
+        val projectDir = File(projectsDir, project.name)
+        if (!projectDir.exists()) {
+            projectDir.mkdirs()
+        }
+
+        return try {
+            var importedFiles = 0
+            ZipInputStream(BufferedInputStream(zipFile.inputStream())).use { zis ->
+                var entry: ZipEntry? = zis.nextEntry
+                while (entry != null) {
+                    val currentEntry = entry
+                    if (!currentEntry.isDirectory && isSafeZipPath(currentEntry.name)) {
+                        val outputFile = File(projectDir, currentEntry.name)
+                        outputFile.parentFile?.mkdirs()
+                        outputFile.outputStream().use { output ->
+                            zis.copyTo(output)
+                        }
+                        importedFiles++
+
+                        val baseName = outputFile.nameWithoutExtension
+                        val extension = outputFile.extension.ifBlank { "txt" }
+                        val content = outputFile.readText()
+                        val existingFileIndex = project.files.indexOfFirst {
+                            it.name == baseName && it.extension.equals(extension, ignoreCase = true)
+                        }
+                        val updatedFile = createNewFile(baseName, extension).copy(
+                            content = content,
+                            isModified = false
+                        )
+                        if (existingFileIndex >= 0) {
+                            project.files[existingFileIndex] = updatedFile
+                        } else {
+                            project.files.add(updatedFile)
+                        }
+                    }
+                    zis.closeEntry()
+                    entry = zis.nextEntry
+                }
+            }
+            saveProject(project)
+            Result.success(importedFiles)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun getPatchBundlesDirectoryPath(): String = patchBundlesDir.absolutePath
+
+    private fun countZipFileEntries(file: File): Int {
+        return try {
+            var count = 0
+            ZipInputStream(BufferedInputStream(file.inputStream())).use { zis ->
+                var entry = zis.nextEntry
+                while (entry != null) {
+                    if (!entry.isDirectory && isSafeZipPath(entry.name)) {
+                        count++
+                    }
+                    zis.closeEntry()
+                    entry = zis.nextEntry
+                }
+            }
+            count
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    private fun isSafeZipPath(path: String): Boolean {
+        if (path.contains("..")) return false
+        if (path.startsWith("/") || path.startsWith("\\")) return false
+        return true
+    }
+
+    private data class PatchBundleAnalysis(
+        val extensions: Set<String>,
+        val detectedLanguage: String,
+        val recommendedTool: String,
+        val toolUtility: String,
+        val utilitySummary: String
+    )
+
+    private fun analyzePatchBundle(zipFile: File): PatchBundleAnalysis {
+        val extensionCount = linkedMapOf<String, Int>()
+        var hasSmali = false
+        var hasAndroidManifest = false
+        var hasResourcesFolder = false
+        var hasDecompiledJavaOrKt = false
+        var hasApktoolMetadata = false
+        var hasJadxExportHints = false
+        var descriptionFromBundle: String? = null
+
+        try {
+            ZipInputStream(BufferedInputStream(zipFile.inputStream())).use { zis ->
+                var entry = zis.nextEntry
+                while (entry != null) {
+                    if (!entry.isDirectory && isSafeZipPath(entry.name)) {
+                        val normalizedPath = entry.name.lowercase()
+                        val extension = entry.name.substringAfterLast(".", "").lowercase()
+                        if (extension.isNotBlank()) {
+                            extensionCount[extension] = (extensionCount[extension] ?: 0) + 1
+                        }
+                        if (normalizedPath.contains("/smali") || normalizedPath.startsWith("smali")) {
+                            hasSmali = true
+                        }
+                        if (normalizedPath.endsWith("androidmanifest.xml")) {
+                            hasAndroidManifest = true
+                        }
+                        if (normalizedPath.startsWith("res/") || normalizedPath.contains("/res/")) {
+                            hasResourcesFolder = true
+                        }
+                        if (normalizedPath.contains("sources/") && (extension == "java" || extension == "kt")) {
+                            hasDecompiledJavaOrKt = true
+                        }
+                        if (normalizedPath.endsWith("apktool.yml")) {
+                            hasApktoolMetadata = true
+                        }
+                        if (normalizedPath.contains("jadx") || normalizedPath.contains("resources/") || normalizedPath.contains("sources/")) {
+                            hasJadxExportHints = true
+                        }
+
+                        val fileName = entry.name.substringAfterLast("/").lowercase()
+                        if (descriptionFromBundle == null && (fileName == "patch-info.txt" || fileName == "readme.txt")) {
+                            descriptionFromBundle = zis.bufferedReader().readText().trim().take(220)
+                        }
+                    }
+                    zis.closeEntry()
+                    entry = zis.nextEntry
+                }
+            }
+        } catch (_: Exception) {
+            // Keep fallback messages if ZIP can't be analyzed.
+        }
+
+        val mainExtension = extensionCount.maxByOrNull { it.value }?.key.orEmpty()
+        val detectedLanguage = extensionToLanguage(mainExtension)
+        val toolRecommendation = recommendTool(
+            hasSmali = hasSmali,
+            hasAndroidManifest = hasAndroidManifest,
+            hasResourcesFolder = hasResourcesFolder,
+            hasDecompiledJavaOrKt = hasDecompiledJavaOrKt,
+            hasApktoolMetadata = hasApktoolMetadata,
+            hasJadxExportHints = hasJadxExportHints
+        )
+        val utilitySummary = descriptionFromBundle
+            ?.takeIf { it.isNotBlank() }
+            ?: defaultUtilitySummary(detectedLanguage, extensionCount.keys)
+
+        return PatchBundleAnalysis(
+            extensions = extensionCount.keys,
+            detectedLanguage = detectedLanguage,
+            recommendedTool = toolRecommendation.first,
+            toolUtility = toolRecommendation.second,
+            utilitySummary = utilitySummary
+        )
+    }
+
+    private fun evaluateCompatibility(
+        currentProject: Project?,
+        patchExtensions: Set<String>
+    ): Pair<Boolean, String> {
+        if (currentProject == null) {
+            return false to "Abre un proyecto para validar si este parche aplica."
+        }
+
+        if (patchExtensions.isEmpty()) {
+            return true to "Parche genérico sin extensión clara. Puedes probarlo en este proyecto."
+        }
+
+        val projectExtensions = currentProject.files.map { it.extension.lowercase() }.toSet()
+        if (projectExtensions.isEmpty()) {
+            return true to "Proyecto vacío. Puedes aplicar este parche para empezar."
+        }
+
+        val overlap = projectExtensions.intersect(patchExtensions)
+        return if (overlap.isNotEmpty()) {
+            true to "Compatible con tu proyecto (${overlap.joinToString(", ")})."
+        } else {
+            false to "No coincide con las extensiones actuales del proyecto (${projectExtensions.joinToString(", ")})."
+        }
+    }
+
+    private fun extensionToLanguage(extension: String): String {
+        return when (extension) {
+            "kt" -> "Kotlin"
+            "java" -> "Java"
+            "js" -> "JavaScript"
+            "ts" -> "TypeScript"
+            "py" -> "Python"
+            "html" -> "HTML"
+            "css" -> "CSS"
+            "json" -> "JSON"
+            "xml" -> "XML"
+            "md" -> "Markdown"
+            "cpp", "cc", "cxx" -> "C++"
+            "c" -> "C"
+            "rs" -> "Rust"
+            "go" -> "Go"
+            else -> "General"
+        }
+    }
+
+    private fun defaultUtilitySummary(language: String, extensions: Set<String>): String {
+        if (extensions.isEmpty()) {
+            return "Parche sin archivos claros. Revisa su contenido antes de usarlo."
+        }
+        return "Parche orientado a $language para acelerar cambios comunes y mantenimiento del proyecto."
+    }
+
+    private fun recommendTool(
+        hasSmali: Boolean,
+        hasAndroidManifest: Boolean,
+        hasResourcesFolder: Boolean,
+        hasDecompiledJavaOrKt: Boolean,
+        hasApktoolMetadata: Boolean,
+        hasJadxExportHints: Boolean
+    ): Pair<String, String> {
+        val looksLikeApktool = hasApktoolMetadata || hasSmali || (hasAndroidManifest && hasResourcesFolder)
+        val looksLikeJadx = hasDecompiledJavaOrKt || hasJadxExportHints
+
+        return when {
+            looksLikeApktool && looksLikeJadx ->
+                "APKTool + JADX" to "Útil para editar recursos/smali y revisar código decompilado."
+            looksLikeApktool ->
+                "APKTool" to "Útil para cambios de AndroidManifest, recursos (res/) y smali."
+            looksLikeJadx ->
+                "JADX" to "Útil para lectura de código Java/Kotlin decompilado."
+            else ->
+                "General ZIP" to "Bundle genérico: revisa README/patch-info para su uso."
+        }
     }
 
 }
