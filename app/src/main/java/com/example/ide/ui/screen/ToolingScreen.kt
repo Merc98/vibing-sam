@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ide.ui.viewmodel.MainViewModel
 import java.io.BufferedInputStream
 import java.util.Locale
@@ -64,6 +65,7 @@ private data class ArchivePreview(
 @Composable
 fun ToolingScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val currentProject by viewModel.currentProject.collectAsStateWithLifecycle()
     val commands = listOf(
         ToolCommand(
             "python tools/vibing_apk_lab.py ./my_app.apk --decode --decompile",
@@ -144,6 +146,50 @@ fun ToolingScreen(viewModel: MainViewModel) {
                         }
                         OutlinedButton(onClick = { viewModel.generateStarterPwaApp() }) {
                             Text("Generate PWA")
+                        }
+                    }
+                }
+            }
+        }
+
+        currentProject?.let { project ->
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Current project files",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = project.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        if (project.files.isEmpty()) {
+                            Text(
+                                text = "No files yet. Generate a starter app or create a file from the editor.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        } else {
+                            project.files.take(8).forEach { file ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "${file.name}.${file.extension}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    AssistChip(
+                                        onClick = { viewModel.selectFile(file) },
+                                        label = { Text("Open") }
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
                         }
                     }
                 }
