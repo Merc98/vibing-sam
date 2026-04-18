@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,6 +44,7 @@ fun MainScreen() {
         AppDestination("Projects") { Icon(Icons.Default.Folder, contentDescription = "Projects") },
         AppDestination("Editor") { Icon(Icons.Default.Edit, contentDescription = "Editor") },
         AppDestination("AI Chat") { Icon(Icons.Default.Chat, contentDescription = "AI Chat") },
+        AppDestination("Toolkit") { Icon(Icons.Default.Handyman, contentDescription = "Toolkit") },
         AppDestination("Settings") { Icon(Icons.Default.Settings, contentDescription = "Settings") }
     )
 
@@ -50,7 +52,7 @@ fun MainScreen() {
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Mobile IDE") },
+                title = { Text(destinations[selectedTab].label) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
                     titleContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
@@ -79,7 +81,8 @@ fun MainScreen() {
                 0 -> ProjectsScreen(viewModel)
                 1 -> EditorScreen(viewModel)
                 2 -> ChatScreen(viewModel)
-                3 -> SettingsScreen(viewModel)
+                3 -> ToolingScreen(viewModel)
+                4 -> SettingsScreen(viewModel)
             }
         }
     }
