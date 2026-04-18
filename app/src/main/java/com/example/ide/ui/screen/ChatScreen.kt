@@ -1,6 +1,5 @@
 package com.example.ide.ui.screen
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,8 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -43,20 +40,8 @@ fun ChatScreen(viewModel: MainViewModel) {
         }
     }
 
-    val backgroundBrush = remember {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color(0xFF040B16),
-                Color(0xFF08142A),
-                Color(0xFF0B1B31)
-            )
-        )
-    }
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundBrush)
+        modifier = Modifier.fillMaxSize()
     ) {
         // Header with model info and current file
         Card(
@@ -64,7 +49,7 @@ fun ChatScreen(viewModel: MainViewModel) {
                 .fillMaxWidth()
                 .padding(8.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0x99132745)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
             Column(
@@ -80,12 +65,12 @@ fun ChatScreen(viewModel: MainViewModel) {
                             text = "VibeCode AI",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFFD21F)
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = selectedModel?.name ?: "No model selected",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF8DA9CC)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     
@@ -107,7 +92,7 @@ fun ChatScreen(viewModel: MainViewModel) {
                         Text(
                             text = "Working on: ${file.name} (${file.language})",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFB8D4FF)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -142,12 +127,12 @@ fun ChatScreen(viewModel: MainViewModel) {
                             Text(
                                 "Start a conversation",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = Color(0xFFB8D4FF)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 "Ask questions about your code or get help with programming",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF8DA9CC)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -240,8 +225,8 @@ fun ChatScreen(viewModel: MainViewModel) {
                             AssistChip(
                                 onClick = { messageText = "${cmd.command} " },
                                 colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = Color(0xFF14253F),
-                                    labelColor = Color(0xFFE2EEFF)
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
                                 ),
                                 label = {
                                     Text("${cmd.command} • ${cmd.description}")
@@ -262,12 +247,12 @@ fun ChatScreen(viewModel: MainViewModel) {
                         maxLines = 4,
                         enabled = !uiState.isLoading,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFF0F223B),
-                            unfocusedContainerColor = Color(0xFF0F223B),
-                            focusedTextColor = Color(0xFFEAF3FF),
-                            unfocusedTextColor = Color(0xFFEAF3FF),
-                            focusedBorderColor = Color(0xFF3F7BC3),
-                            unfocusedBorderColor = Color(0xFF24466F)
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         )
                     )
                     
@@ -281,8 +266,8 @@ fun ChatScreen(viewModel: MainViewModel) {
                             }
                         },
                         modifier = Modifier.size(48.dp),
-                        containerColor = Color(0xFFFFD21F),
-                        contentColor = Color(0xFF031126)
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
@@ -303,8 +288,8 @@ fun ChatScreen(viewModel: MainViewModel) {
                             onClick = { messageText = action },
                             label = { Text(action) },
                             colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = Color(0xFF111F35),
-                                labelColor = Color(0xFFFFD21F)
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         )
                     }

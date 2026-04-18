@@ -220,19 +220,6 @@ How to use:
 3. Choose `debug` or `release`
 4. Download artifact: `app-debug-apk` or `app-release-apk`
 
-## 🛠️ Compile Debug Checklist (Local)
-If compilation fails locally, run:
-
-```bash
-bash tools/compile_doctor.sh
-```
-
-What it checks/fixes:
-- `gradlew` execute permission
-- Android SDK path from `ANDROID_HOME`, `ANDROID_SDK_ROOT`, or `local.properties`
-- Required SDK packages for this project (`platforms;android-36`, `build-tools;36.0.0`, `platform-tools`) when `sdkmanager` is available
-- Runs `:app:assembleDebug` and prints the generated APK path
-
 ## 🤝 Contributing
 We welcome contributions from the community! Here's how you can help:
 
