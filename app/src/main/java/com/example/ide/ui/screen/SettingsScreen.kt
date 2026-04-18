@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -18,7 +19,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ide.data.model.AIModel
 import com.example.ide.data.model.AIModelType
+import com.example.ide.data.repository.PatchBundle
 import com.example.ide.ui.viewmodel.MainViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +31,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val availableModels by viewModel.availableModels.collectAsStateWithLifecycle()
     val selectedModel by viewModel.selectedModel.collectAsStateWithLifecycle()
     val apiKeys by viewModel.apiKeys.collectAsStateWithLifecycle()
+    val patchBundles by viewModel.patchBundles.collectAsStateWithLifecycle()
+    val keyRequiredModels = remember(availableModels) { availableModels.filter { it.requiresApiKey } }
+    LaunchedEffect(Unit) {
+        viewModel.refreshPatchBundles()
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -118,28 +128,60 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
 
         item {
-            Text(
-                text = "API Keys",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Free AI by default",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Use Local Smart Assist or Local Quick Help without API keys. External providers are optional.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+        }
+
+        if (keyRequiredModels.isNotEmpty()) {
+            item {
+                Text(
+                    text = "API Keys (Optional)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            item {
+                Text(
+                    text = "Configure keys only for online providers you want to use.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+
+            items(keyRequiredModels.groupBy { getProviderName(it.type) }.toList()) { (provider, models) ->
+                ApiKeySection(
+                    provider = provider,
+                    models = models,
+                    apiKeys = apiKeys,
+                    onApiKeyChange = { modelType, key ->
+                        viewModel.setApiKey(modelType, key)
+                    }
+                )
+            }
         }
 
         item {
-            Text(
-                text = "Configure API keys for different AI models. Keys are stored locally on your device.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
-
-        items(availableModels.groupBy { getProviderName(it.type) }.toList()) { (provider, models) ->
-            ApiKeySection(
-                provider = provider,
-                models = models,
-                apiKeys = apiKeys,
-                onApiKeyChange = { modelType, key ->
-                    viewModel.setApiKey(modelType, key)
+            PatchBundlesSection(
+                patchBundles = patchBundles,
+                patchFolderPath = viewModel.getPatchBundlesDirectoryPath(),
+                onRefresh = { viewModel.refreshPatchBundles() },
+                onAutoApply = { viewModel.applyLatestCompatiblePatchToCurrentProject() },
+                onApplyPatch = { fileName ->
+                    viewModel.applyPatchBundleToCurrentProject(fileName)
                 }
             )
         }
@@ -281,6 +323,7 @@ fun ApiKeySection(
 
 private fun getProviderName(modelType: AIModelType): String {
     return when (modelType) {
+        AIModelType.LOCAL_SMART_ASSIST, AIModelType.LOCAL_QUICK_HELP -> "Local Free AI"
         AIModelType.OPENAI_GPT4, AIModelType.OPENAI_GPT35 -> "OpenAI"
         AIModelType.CLAUDE_3_OPUS, AIModelType.CLAUDE_3_SONNET, AIModelType.CLAUDE_3_HAIKU -> "Anthropic"
         AIModelType.GEMINI_PRO, AIModelType.GEMINI_FLASH -> "Google"
@@ -296,5 +339,145 @@ private fun getProviderName(modelType: AIModelType): String {
         AIModelType.DEEPSEEK -> "DeepSeek"
         AIModelType.Z_MODEL -> "Z"
         AIModelType.KIMI -> "Moonshot AI"
+    }
+}
+
+@Composable
+fun PatchBundlesSection(
+    patchBundles: List<PatchBundle>,
+    patchFolderPath: String,
+    onRefresh: () -> Unit,
+    onAutoApply: () -> Unit,
+    onApplyPatch: (String) -> Unit
+) {
+    val compatibleCount = patchBundles.count { it.isCompatibleWithCurrentProject }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Patch Bundles (ZIP)",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                TextButton(onClick = onRefresh) {
+                    Text("Refresh", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Button(
+                onClick = onAutoApply,
+                enabled = compatibleCount > 0,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val quickActionText = if (compatibleCount > 0) {
+                    "Aplicar parche recomendado (${compatibleCount} compatibles)"
+                } else {
+                    "Sin parches compatibles"
+                }
+                Text(quickActionText, style = MaterialTheme.typography.labelSmall)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Put .zip files in: $patchFolderPath",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Text(
+                text = "Flujo simple: refresca y usa 'Aplicar parche recomendado' para hacerlo en un paso.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (patchBundles.isEmpty()) {
+                Text(
+                    text = "No patch bundles found.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            } else {
+                patchBundles.forEach { bundle ->
+                    PatchBundleItem(bundle = bundle, onApplyPatch = onApplyPatch)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PatchBundleItem(
+    bundle: PatchBundle,
+    onApplyPatch: (String) -> Unit
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = bundle.fileName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "${bundle.patchFileCount} files • ${(bundle.sizeBytes / 1024).coerceAtLeast(1)} KB",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Text(
+                text = "Lenguaje detectado: ${bundle.detectedLanguage}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Text(
+                text = "Herramienta recomendada: ${bundle.recommendedTool}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Text(
+                text = "Utilidad: ${bundle.toolUtility}",
+                style = MaterialTheme.typography.labelSmall
+            )
+            Text(
+                text = bundle.utilitySummary,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Text(
+                text = "Updated ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(bundle.lastModified))}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Surface(
+                color = if (bundle.isCompatibleWithCurrentProject) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                } else {
+                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+                },
+                shape = MaterialTheme.shapes.small
+            ) {
+                Text(
+                    text = bundle.compatibilityMessage,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                    color = if (bundle.isCompatibleWithCurrentProject) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        Color(0xFF8B0000)
+                    }
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { onApplyPatch(bundle.fileName) },
+                enabled = bundle.isCompatibleWithCurrentProject
+            ) {
+                Text("Apply", style = MaterialTheme.typography.labelSmall)
+            }
+        }
     }
 }

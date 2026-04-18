@@ -1,6 +1,7 @@
 package com.example.ide.data.api
 
 import com.example.ide.data.model.*
+import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -45,6 +46,7 @@ interface OpenRouterApiService {
 // Claude-specific models
 data class ClaudeRequest(
     val model: String,
+    @SerializedName("max_tokens")
     val maxTokens: Int,
     val messages: List<ClaudeMessage>,
     val temperature: Double = 0.7
@@ -61,6 +63,7 @@ data class ClaudeResponse(
     val role: String,
     val content: List<ClaudeContent>,
     val model: String,
+    @SerializedName("stop_reason")
     val stopReason: String?,
     val usage: ClaudeUsage
 )
@@ -71,13 +74,16 @@ data class ClaudeContent(
 )
 
 data class ClaudeUsage(
+    @SerializedName("input_tokens")
     val inputTokens: Int,
+    @SerializedName("output_tokens")
     val outputTokens: Int
 )
 
 // Gemini-specific models
 data class GeminiRequest(
     val contents: List<GeminiContent>,
+    @SerializedName("generationConfig")
     val generationConfig: GeminiGenerationConfig? = null
 )
 
@@ -91,22 +97,28 @@ data class GeminiPart(
 
 data class GeminiGenerationConfig(
     val temperature: Double = 0.7,
+    @SerializedName("maxOutputTokens")
     val maxOutputTokens: Int = 4096
 )
 
 data class GeminiResponse(
     val candidates: List<GeminiCandidate>?,
+    @SerializedName("usageMetadata")
     val usageMetadata: GeminiUsageMetadata?
 )
 
 data class GeminiCandidate(
     val content: GeminiContent,
+    @SerializedName("finishReason")
     val finishReason: String?
 )
 
 data class GeminiUsageMetadata(
+    @SerializedName("promptTokenCount")
     val promptTokenCount: Int,
+    @SerializedName("candidatesTokenCount")
     val candidatesTokenCount: Int,
+    @SerializedName("totalTokenCount")
     val totalTokenCount: Int
 )
 
@@ -114,6 +126,7 @@ data class GeminiUsageMetadata(
 data class OpenRouterRequest(
     val model: String,
     val messages: List<ChatMessage>,
+    @SerializedName("max_tokens")
     val maxTokens: Int = 4096,
     val temperature: Double = 0.7,
     val stream: Boolean = false
