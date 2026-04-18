@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.ide.data.model.*
 import com.example.ide.data.repository.AIRepository
 import com.example.ide.data.repository.FileRepository
+import com.example.ide.data.repository.PatchBundle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
