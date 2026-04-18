@@ -17,11 +17,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.AssistChip
@@ -30,6 +30,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -94,7 +95,6 @@ fun ToolingScreen(viewModel: MainViewModel) {
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
         } catch (_: SecurityException) {
-            // Some providers do not grant persistable permissions; continue with transient access.
         }
 
         archivePreview = try {
@@ -125,18 +125,27 @@ fun ToolingScreen(viewModel: MainViewModel) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                        Icon(Icons.Default.Language, contentDescription = null)
                         Text(
-                            text = "AI gratis lista",
+                            text = "Create apps faster",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "El flujo básico usa Local Smart Assist / Local Quick Help sin API key. Los modelos externos quedan como opcionales en Settings.",
+                        text = "Create a starter web app or installable PWA, then open and edit the generated files in the Editor.",
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(onClick = { viewModel.generateStarterWebApp() }) {
+                            Text("Generate Web App")
+                        }
+                        OutlinedButton(onClick = { viewModel.generateStarterPwaApp() }) {
+                            Text("Generate PWA")
+                        }
+                    }
                 }
             }
         }
@@ -147,14 +156,14 @@ fun ToolingScreen(viewModel: MainViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Default.FileOpen, contentDescription = null)
                         Text(
-                            text = "Seleccionar APK / ZIP / archivo",
+                            text = "Select APK / ZIP / file",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Carga un archivo desde el teléfono y revisa estructura, tamaño y entradas detectadas aquí mismo.",
+                        text = "Load a file from the phone and inspect structure, size and detected entries here.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -165,7 +174,7 @@ fun ToolingScreen(viewModel: MainViewModel) {
                             "*/*"
                         ))
                     }) {
-                        Text("Abrir archivo")
+                        Text("Open file")
                     }
                 }
             }
@@ -179,7 +188,7 @@ fun ToolingScreen(viewModel: MainViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         CircularProgressIndicator()
-                        Text("Analizando archivo…")
+                        Text("Analyzing file…")
                     }
                 }
             }
@@ -190,7 +199,7 @@ fun ToolingScreen(viewModel: MainViewModel) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "No se pudo abrir el archivo",
+                            text = "Could not open file",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error
@@ -215,10 +224,10 @@ fun ToolingScreen(viewModel: MainViewModel) {
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Tipo: ${preview.fileType}")
-                        Text("Tamaño: ${formatBytes(preview.sizeBytes)}")
-                        Text("Entradas detectadas: ${preview.entryCount}")
-                        Text("Herramienta sugerida: ${preview.suggestedTool}")
+                        Text("Type: ${preview.fileType}")
+                        Text("Size: ${formatBytes(preview.sizeBytes)}")
+                        Text("Detected entries: ${preview.entryCount}")
+                        Text("Suggested tool: ${preview.suggestedTool}")
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(preview.summary, style = MaterialTheme.typography.bodyMedium)
                     }
@@ -228,7 +237,7 @@ fun ToolingScreen(viewModel: MainViewModel) {
             if (preview.sampleEntries.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Archivos detectados",
+                        text = "Detected files",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -254,21 +263,15 @@ fun ToolingScreen(viewModel: MainViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Default.Security, contentDescription = null)
                         Text(
-                            text = "APK Security Lab (Safe)",
+                            text = "APK Security Lab",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Incluye flujos de inspección y decompilación para apps propias o autorizadas.",
+                        text = "Inspection and decompilation workflows for apps you own or are authorized to assess.",
                         style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "No payload injection / no bypass automation.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -280,7 +283,7 @@ fun ToolingScreen(viewModel: MainViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Default.Inventory2, contentDescription = null)
                         Text(
-                            text = "Qué cubre",
+                            text = "What this covers",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -300,14 +303,14 @@ fun ToolingScreen(viewModel: MainViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Default.Build, contentDescription = null)
                         Text(
-                            text = "Creación de APK",
+                            text = "APK creation",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Usa el workflow de GitHub Actions para compilar y bajar el artifact del APK desde Actions.",
+                        text = "Use GitHub Actions to build and download the APK artifact from the Actions tab.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -363,7 +366,7 @@ private fun inspectArchive(context: android.content.Context, uri: Uri): ArchiveP
     val fileType = when {
         lowerName.endsWith(".apk") -> "APK"
         lowerName.endsWith(".zip") -> "ZIP"
-        else -> "Archivo"
+        else -> "File"
     }
 
     val sampleEntries = mutableListOf<String>()
@@ -401,11 +404,11 @@ private fun inspectArchive(context: android.content.Context, uri: Uri): ArchiveP
     }
 
     val summary = buildString {
-        append("Se detectó un paquete listo para inspección. ")
-        append("Manifest: ${if (hasManifest) "sí" else "no"}. ")
-        append("DEX: ${if (hasDex) "sí" else "no"}. ")
-        append("Recursos: ${if (hasResources) "sí" else "no"}. ")
-        append("Smali: ${if (hasSmali) "sí" else "no"}.")
+        append("Package ready for inspection. ")
+        append("Manifest: ${if (hasManifest) "yes" else "no"}. ")
+        append("DEX: ${if (hasDex) "yes" else "no"}. ")
+        append("Resources: ${if (hasResources) "yes" else "no"}. ")
+        append("Smali: ${if (hasSmali) "yes" else "no"}.")
     }
 
     return ArchivePreview(
