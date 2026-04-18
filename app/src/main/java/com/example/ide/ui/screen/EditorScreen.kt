@@ -1,7 +1,6 @@
 package com.example.ide.ui.screen
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,8 +20,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ide.data.model.CodeFile
 import com.example.ide.data.model.FileExtension
 import com.example.ide.ui.viewmodel.MainViewModel
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,9 +31,10 @@ fun EditorScreen(viewModel: MainViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
-    
+
     var showCreateFileDialog by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
+    var showQuickInsertDialog by remember { mutableStateOf(false) }
     var newFileName by remember { mutableStateOf("") }
     var selectedExtension by remember { mutableStateOf(FileExtension.TXT) }
     var saveFileName by remember { mutableStateOf("") }
@@ -65,13 +63,21 @@ fun EditorScreen(viewModel: MainViewModel) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(onClick = { viewModel.generateStarterWebApp() }) {
+                        Text("Generate Web App")
+                    }
+                    OutlinedButton(onClick = { viewModel.generateStarterPwaApp() }) {
+                        Text("Generate PWA")
+                    }
+                }
             }
         }
         return
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // File tabs and toolbar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -83,50 +89,55 @@ fun EditorScreen(viewModel: MainViewModel) {
                 text = currentProject?.name ?: "No Project",
                 style = MaterialTheme.typography.titleMedium
             )
-            
+
             Row {
                 IconButton(onClick = { showCreateFileDialog = true }) {
                     Icon(Icons.Default.Add, contentDescription = "New File")
                 }
-                
+
                 IconButton(
                     onClick = { viewModel.saveCurrentFile() },
                     enabled = currentFile?.isModified == true
                 ) {
                     Icon(Icons.Default.Save, contentDescription = "Save")
                 }
-                
+
                 IconButton(
                     onClick = { showSaveDialog = true },
                     enabled = currentFile != null
                 ) {
                     Icon(Icons.Default.Download, contentDescription = "Save to Downloads")
                 }
-                
-                // Add Run button for HTML files
+
+                IconButton(
+                    onClick = { showQuickInsertDialog = true },
+                    enabled = currentFile != null
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = "Quick Insert")
+                }
+
                 currentFile?.let { file ->
                     if (file.extension.equals("html", ignoreCase = true)) {
                         IconButton(
                             onClick = {
                                 try {
-                                    // Create intent to open HTML file in browser
                                     val projectDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
                                     val ideProjectsDir = java.io.File(projectDir, "IDEProjects")
                                     val projectFolder = java.io.File(ideProjectsDir, currentProject?.name ?: "")
                                     val htmlFile = java.io.File(projectFolder, "${file.name}.${file.extension}")
-                                    
+
                                     if (htmlFile.exists()) {
                                         val uri = androidx.core.content.FileProvider.getUriForFile(
                                             context,
                                             "${context.packageName}.fileprovider",
                                             htmlFile
                                         )
-                                        
+
                                         val intent = Intent(Intent.ACTION_VIEW).apply {
                                             setDataAndType(uri, "text/html")
                                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         }
-                                        
+
                                         if (intent.resolveActivity(context.packageManager) != null) {
                                             context.startActivity(intent)
                                         } else {
@@ -152,11 +163,17 @@ fun EditorScreen(viewModel: MainViewModel) {
                 }
             }
         }
-        
+
+        EditorActionStrip(
+            currentFile = currentFile,
+            onGenerateWebApp = { viewModel.generateStarterWebApp() },
+            onGeneratePwa = { viewModel.generateStarterPwaApp() },
+            onOpenQuickInsert = { showQuickInsertDialog = true }
+        )
+
         Divider()
-        
+
         Row(modifier = Modifier.fillMaxSize()) {
-            // File list sidebar
             val project = currentProject
             if (project != null && project.files.isNotEmpty()) {
                 LazyColumn(
@@ -172,14 +189,12 @@ fun EditorScreen(viewModel: MainViewModel) {
                             isSelected = file.id == currentFile?.id,
                             onClick = { viewModel.selectFile(file) },
                             onDeleteFile = { fileToDelete ->
-                                // Delete from project directory
                                 viewModel.deleteFileFromProject(
                                     project.name,
                                     fileToDelete.name,
                                     fileToDelete.extension
                                 )
-                                
-                                // Update project in memory
+
                                 val updatedProject = project.copy()
                                 updatedProject.files.removeIf { it.id == fileToDelete.id }
                                 viewModel.openProject(updatedProject)
@@ -187,11 +202,10 @@ fun EditorScreen(viewModel: MainViewModel) {
                         )
                     }
                 }
-                
+
                 VerticalDivider()
             }
-            
-            // Editor area
+
             Box(modifier = Modifier.fillMaxSize()) {
                 val file = currentFile
                 if (file != null) {
@@ -222,15 +236,13 @@ fun EditorScreen(viewModel: MainViewModel) {
                 }
             }
         }
-        
-        // Snackbar for messages
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.padding(16.dp)
         )
     }
 
-    // Create file dialog
     if (showCreateFileDialog) {
         AlertDialog(
             onDismissRequest = { showCreateFileDialog = false },
@@ -243,9 +255,9 @@ fun EditorScreen(viewModel: MainViewModel) {
                         label = { Text("File Name") },
                         singleLine = true
                     )
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     var expanded by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
                         expanded = expanded,
@@ -259,7 +271,7 @@ fun EditorScreen(viewModel: MainViewModel) {
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                             modifier = Modifier.menuAnchor()
                         )
-                        
+
                         ExposedDropdownMenu(
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
@@ -298,7 +310,6 @@ fun EditorScreen(viewModel: MainViewModel) {
         )
     }
 
-    // Save to downloads dialog
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
@@ -312,9 +323,9 @@ fun EditorScreen(viewModel: MainViewModel) {
                         singleLine = true,
                         placeholder = { Text(currentFile?.name ?: "") }
                     )
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     OutlinedTextField(
                         value = saveExtension,
                         onValueChange = { saveExtension = it },
@@ -331,7 +342,7 @@ fun EditorScreen(viewModel: MainViewModel) {
                         val fileName = saveFileName.ifBlank { file?.name ?: "untitled" }
                         val extension = saveExtension.ifBlank { file?.extension ?: "txt" }
                         val content = file?.content ?: ""
-                        
+
                         viewModel.saveFileToDownloads(fileName, content, extension)
                         showSaveDialog = false
                         saveFileName = ""
@@ -349,19 +360,136 @@ fun EditorScreen(viewModel: MainViewModel) {
         )
     }
 
-    // Show messages
+    if (showQuickInsertDialog) {
+        QuickInsertDialog(
+            currentFile = currentFile,
+            onDismiss = { showQuickInsertDialog = false },
+            onAppend = { snippet ->
+                viewModel.appendToCurrentFile(snippet)
+                showQuickInsertDialog = false
+            },
+            onReplace = { snippet ->
+                viewModel.replaceCurrentFileWithContent(snippet)
+                showQuickInsertDialog = false
+            }
+        )
+    }
+
     uiState.message?.let { message ->
         LaunchedEffect(message) {
             snackbarHostState.showSnackbar(message)
             viewModel.clearMessage()
         }
     }
-    
+
     uiState.error?.let { error ->
         LaunchedEffect(error) {
             snackbarHostState.showSnackbar(error)
             viewModel.clearError()
         }
+    }
+}
+
+@Composable
+private fun EditorActionStrip(
+    currentFile: CodeFile?,
+    onGenerateWebApp: () -> Unit,
+    onGeneratePwa: () -> Unit,
+    onOpenQuickInsert: () -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AssistChip(onClick = onGenerateWebApp, label = { Text("Web App") })
+            AssistChip(onClick = onGeneratePwa, label = { Text("Installable PWA") })
+            AssistChip(
+                onClick = onOpenQuickInsert,
+                enabled = currentFile != null,
+                label = { Text("Insert code") }
+            )
+        }
+        if (currentFile != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Working file: ${currentFile.name}.${currentFile.extension}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickInsertDialog(
+    currentFile: CodeFile?,
+    onDismiss: () -> Unit,
+    onAppend: (String) -> Unit,
+    onReplace: (String) -> Unit
+) {
+    val extension = currentFile?.extension?.lowercase().orEmpty()
+    val snippet = remember(extension) { defaultSnippetForExtension(extension) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Insert generated code") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Use a quick generated starter for the current file.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = snippet,
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = { onAppend(snippet) }) {
+                    Text("Append")
+                }
+                TextButton(onClick = { onReplace(snippet) }) {
+                    Text("Replace")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
+private fun defaultSnippetForExtension(extension: String): String {
+    return when (extension) {
+        "html" -> """
+            <section class=\"generated-panel\">
+              <h2>Generated section</h2>
+              <p>This block was inserted from the editor tools.</p>
+            </section>
+        """.trimIndent()
+        "css" -> """
+            .generated-panel {
+              padding: 16px;
+              border-radius: 18px;
+              background: rgba(255, 255, 255, 0.08);
+            }
+        """.trimIndent()
+        "js" -> """
+            export function runGeneratedAction() {
+              console.log('Generated action ready');
+            }
+        """.trimIndent()
+        "kt" -> """
+            fun generatedHelperMessage(): String {
+                return \"Generated Kotlin helper ready\"
+            }
+        """.trimIndent()
+        else -> "Generated content block\n- update me\n- save me\n- run me"
     }
 }
 
@@ -374,13 +502,13 @@ fun FileItem(
     onDeleteFile: (CodeFile) -> Unit = { _ -> }
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
-    
+
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) 
-                MaterialTheme.colorScheme.primaryContainer 
-            else 
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
                 MaterialTheme.colorScheme.surface
         ),
         modifier = Modifier.fillMaxWidth()
@@ -393,26 +521,26 @@ fun FileItem(
                 Icons.Default.Description,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = if (isSelected) 
-                    MaterialTheme.colorScheme.onPrimaryContainer 
-                else 
+                tint = if (isSelected)
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                else
                     MaterialTheme.colorScheme.onSurface
             )
-            
+
             Spacer(modifier = Modifier.width(8.dp))
-            
+
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = file.name,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isSelected) 
-                        MaterialTheme.colorScheme.onPrimaryContainer 
-                    else 
+                    color = if (isSelected)
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    else
                         MaterialTheme.colorScheme.onSurface
                 )
-                
+
                 if (file.isModified) {
                     Text(
                         text = "Modified",
@@ -421,7 +549,7 @@ fun FileItem(
                     )
                 }
             }
-            
+
             IconButton(
                 onClick = { showDeleteDialog = true }
             ) {
@@ -434,8 +562,7 @@ fun FileItem(
             }
         }
     }
-    
-    // Delete confirmation dialog
+
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -466,14 +593,14 @@ fun CodeEditor(
     onContentChange: (String) -> Unit
 ) {
     var content by remember(file.id) { mutableStateOf(file.content) }
-    
+
     LaunchedEffect(file.content) {
         content = file.content
     }
-    
+
     BasicTextField(
         value = content,
-        onValueChange = { 
+        onValueChange = {
             content = it
             onContentChange(it)
         },
