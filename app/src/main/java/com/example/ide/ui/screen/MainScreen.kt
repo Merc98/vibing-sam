@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -23,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ide.ui.viewmodel.MainViewModel
 
@@ -38,8 +40,10 @@ fun MainScreen() {
     val viewModel: MainViewModel = viewModel(
         factory = com.example.ide.di.ViewModelFactory(context)
     )
+    val currentProject by viewModel.currentProject.collectAsStateWithLifecycle()
+    val currentFile by viewModel.currentFile.collectAsStateWithLifecycle()
 
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(3) }
     val destinations = listOf(
         AppDestination("Projects") { Icon(Icons.Default.Folder, contentDescription = "Projects") },
         AppDestination("Editor") { Icon(Icons.Default.Edit, contentDescription = "Editor") },
@@ -48,14 +52,31 @@ fun MainScreen() {
         AppDestination("Settings") { Icon(Icons.Default.Settings, contentDescription = "Settings") }
     )
 
+    val subtitle = when (selectedTab) {
+        1 -> currentFile?.let { "${it.name}.${it.extension}" } ?: currentProject?.name
+        3 -> currentProject?.name
+        else -> null
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(destinations[selectedTab].label) },
+                title = {
+                    androidx.compose.foundation.layout.Column {
+                        Text(destinations[selectedTab].label)
+                        subtitle?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                    titleContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
