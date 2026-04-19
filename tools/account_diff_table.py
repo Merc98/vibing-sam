@@ -130,6 +130,11 @@ def main() -> int:
         action="store_true",
         help="Show only account+location keys with conflicting results across documents",
     )
+    parser.add_argument(
+        "--show-repeats-only",
+        action="store_true",
+        help="Show only keys that appear more than once across the inputs",
+    )
     args = parser.parse_args()
 
     grouped: dict[tuple[str, str], list[tuple[str, str, str]]] = defaultdict(list)
@@ -150,15 +155,25 @@ def main() -> int:
     for (account, location), entries in grouped.items():
         distinct_results = sorted({result for _, result, _ in entries if result})
         is_conflict = len(distinct_results) > 1
+        repeat_count = len(entries)
+
         if args.only_differences and not is_conflict:
             continue
+        if args.show_repeats_only and repeat_count <= 1:
+            continue
+
+        grouped_details: dict[tuple[str, str, str], int] = defaultdict(int)
+        for file_name, result, extra in entries:
+            grouped_details[(file_name, result, extra)] += 1
 
         details = []
-        for file_name, result, extra in entries:
-            pieces = [f"{file_name}: {result or '[vacío]'}"]
+        for (file_name, result, extra), count in sorted(grouped_details.items()):
+            base = f"{file_name}: {result or '[vacío]'}"
             if extra:
-                pieces.append(f"extra={extra}")
-            details.append(" (".join([pieces[0], ", ".join(pieces[1:]) + ")"]) if len(pieces) > 1 else pieces[0])
+                base += f" (extra={extra})"
+            if count > 1:
+                base += f" x{count}"
+            details.append(base)
 
         status = "DIFERENTE" if is_conflict else "IGUAL"
         table_rows.append(
@@ -166,6 +181,7 @@ def main() -> int:
                 account,
                 location,
                 status,
+                str(repeat_count),
                 ", ".join(distinct_results) if distinct_results else "[vacío]",
                 "; ".join(details),
             ]
@@ -184,6 +200,7 @@ def main() -> int:
         "Cuenta",
         "Ubicación",
         "Estado",
+        "Repeticiones",
         "Resultados únicos",
         "Detalle por documento",
     ]
