@@ -182,8 +182,6 @@ val writePuenteManifest by tasks.registering {
     }
 }
 
-androidComponents.onVariants { variant ->
-    tasks.named("merge${variant.name.replaceFirstChar { it.uppercase() }}Assets").configure {
-        dependsOn(writePuenteManifest)
-    }
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(writePuenteManifest)
 }
