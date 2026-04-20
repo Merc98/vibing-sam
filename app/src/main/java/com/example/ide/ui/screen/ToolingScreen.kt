@@ -309,6 +309,38 @@ fun ToolingScreen(viewModel: MainViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Default.Security, contentDescription = null)
                         Text(
+                            text = "Puente — Reverse Engineering Platform",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Self-contained: apktool + apksig + Frida gadget run in-process. " +
+                                "Import APK, inspect, decompile, patch, inject, sign and install.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(onClick = {
+                        context.startActivity(
+                            android.content.Intent(
+                                context,
+                                com.example.ide.puente.PuenteActivity::class.java
+                            )
+                        )
+                    }) {
+                        Text("Open Puente")
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Security, contentDescription = null)
+                        Text(
                             text = "APK Security Lab",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
