@@ -248,21 +248,21 @@ class MainViewModel(
                     "html",
                     """
                     <!doctype html>
-                    <html lang=\"en\">
+                    <html lang="en">
                     <head>
-                      <meta charset=\"UTF-8\" />
-                      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+                      <meta charset="UTF-8" />
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                       <title>$projectName</title>
-                      <link rel=\"stylesheet\" href=\"styles.css\" />
+                      <link rel="stylesheet" href="styles.css" />
                     </head>
                     <body>
-                      <main class=\"app-shell\">
+                      <main class="app-shell">
                         <h1>$projectName</h1>
                         <p>Your starter web app is ready.</p>
-                        <button id=\"actionButton\">Run starter action</button>
-                        <section id=\"output\"></section>
+                        <button id="actionButton">Run starter action</button>
+                        <section id="output"></section>
                       </main>
-                      <script src=\"app.js\"></script>
+                      <script src="app.js"></script>
                     </body>
                     </html>
                     """.trimIndent()
@@ -328,12 +328,12 @@ class MainViewModel(
                     "html",
                     """
                     <!doctype html>
-                    <html lang=\"en\">
+                    <html lang="en">
                     <head>
-                      <meta charset=\"UTF-8\" />
-                      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
-                      <meta name=\"theme-color\" content=\"#111827\" />
-                      <link rel=\"manifest\" href=\"manifest.json\" />
+                      <meta charset="UTF-8" />
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                      <meta name="theme-color" content="#111827" />
+                      <link rel="manifest" href="manifest.json" />
                       <title>$projectName</title>
                     </head>
                     <body>
@@ -341,7 +341,7 @@ class MainViewModel(
                         <h1>$projectName</h1>
                         <p>Installable web app starter.</p>
                       </main>
-                      <script src=\"app.js\"></script>
+                      <script src="app.js"></script>
                     </body>
                     </html>
                     """.trimIndent()
@@ -367,12 +367,13 @@ class MainViewModel(
                     "json",
                     """
                     {
-                      \"name\": \"$projectName\",
-                      \"short_name\": \"Starter PWA\",
-                      \"start_url\": \"./index.html\",
-                      \"display\": \"standalone\",
-                      \"background_color\": \"#111827\",
-                      \"theme_color\": \"#111827\"
+                      "name": "$projectName",
+                      "short_name": "Starter PWA",
+                      "start_url": "./index.html",
+                      "display": "standalone",
+                      "background_color": "#111827",
+                      "theme_color": "#111827",
+                      "icons": []
                     }
                     """.trimIndent()
                 ),
