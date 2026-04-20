@@ -32,6 +32,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val selectedModel by viewModel.selectedModel.collectAsStateWithLifecycle()
     val apiKeys by viewModel.apiKeys.collectAsStateWithLifecycle()
     val patchBundles by viewModel.patchBundles.collectAsStateWithLifecycle()
+    val localModels = remember(availableModels) { availableModels.filter { !it.requiresApiKey } }
     val keyRequiredModels = remember(availableModels) { availableModels.filter { it.requiresApiKey } }
     LaunchedEffect(Unit) {
         viewModel.refreshPatchBundles()
@@ -52,113 +53,51 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
 
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "AI Model Selection",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Free AI by default",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
-                    
                     Text(
-                        text = "Choose your preferred AI model for code assistance",
+                        text = "Local Smart Assist and Local Quick Help work without API keys. Use online providers only when you want them.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline
                     )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    var expanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedModel?.name ?: "Select a model",
-                            onValueChange = { },
-                            readOnly = true,
-                            label = { Text("AI Model") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    localModels.forEach { model ->
+                        CompactModelRow(
+                            model = model,
+                            isSelected = model.type == selectedModel?.type,
+                            onSelect = { viewModel.selectModel(model) },
+                            badge = "Free"
                         )
-                        
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            availableModels.forEach { model ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(model.name)
-                                            Text(
-                                                text = model.description,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.outline
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.selectModel(model)
-                                        expanded = false
-                                    },
-                                    leadingIcon = {
-                                        if (model.type == selectedModel?.type) {
-                                            Icon(
-                                                Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Free AI by default",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Use Local Smart Assist or Local Quick Help without API keys. External providers are optional.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            }
+            CompactModelPicker(
+                selectedModel = selectedModel,
+                availableModels = availableModels,
+                onSelectModel = { viewModel.selectModel(it) }
+            )
         }
 
         if (keyRequiredModels.isNotEmpty()) {
             item {
                 Text(
-                    text = "API Keys (Optional)",
+                    text = "Online providers (optional)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                Text(
-                    text = "Configure keys only for online providers you want to use.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
                 )
             }
 
@@ -207,28 +146,114 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     )
                     
                     Text(
-                        text = "A powerful mobile IDE with AI assistance for coding on the go.",
+                        text = "A mobile IDE focused on local-first coding workflows, file editing, starter app generation and optional AI providers.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline
                     )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Supports multiple programming languages and AI models",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CompactModelPicker(
+    selectedModel: AIModel?,
+    availableModels: List<AIModel>,
+    onSelectModel: (AIModel) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "All models",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            var expanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
+            ) {
+                OutlinedTextField(
+                    value = selectedModel?.name ?: "Select a model",
+                    onValueChange = { },
+                    readOnly = true,
+                    label = { Text("AI model") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    availableModels.forEach { model ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(model.name)
+                                    Text(
+                                        text = model.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            },
+                            onClick = {
+                                onSelectModel(model)
+                                expanded = false
+                            },
+                            leadingIcon = {
+                                if (model.type == selectedModel?.type) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactModelRow(
+    model: AIModel,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    badge: String
+) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onSelect
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(model.name, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = model.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                AssistChip(onClick = onSelect, label = { Text(badge) })
+                if (isSelected) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Selected",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
@@ -266,7 +291,6 @@ fun ApiKeySection(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Use the first model's type as representative for the provider
             val representativeType = models.first().type
             var apiKey by remember(representativeType) { 
                 mutableStateOf(apiKeys[representativeType] ?: "") 
@@ -277,7 +301,6 @@ fun ApiKeySection(
                 value = apiKey,
                 onValueChange = { 
                     apiKey = it
-                    // Set the same key for all models from this provider
                     models.forEach { model ->
                         onApiKeyChange(model.type, it)
                     }
@@ -330,9 +353,7 @@ private fun getProviderName(modelType: AIModelType): String {
         AIModelType.COHERE_COMMAND -> "Cohere"
         AIModelType.MISTRAL_LARGE, AIModelType.MISTRAL_MEDIUM -> "Mistral"
         AIModelType.LLAMA_70B, AIModelType.CODELLAMA_34B -> "Meta"
-        // OpenRouter models
         AIModelType.OPENROUTER_AUTO -> "OpenRouter"
-        // Chinese free models
         AIModelType.LINGMA -> "Lingma"
         AIModelType.QWEN -> "Alibaba"
         AIModelType.LONGCAT_AI -> "Longcat AI"
@@ -387,11 +408,6 @@ fun PatchBundlesSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )
-            Text(
-                text = "Flujo simple: refresca y usa 'Aplicar parche recomendado' para hacerlo en un paso.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
-            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -437,10 +453,6 @@ private fun PatchBundleItem(
                 text = "Herramienta recomendada: ${bundle.recommendedTool}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline
-            )
-            Text(
-                text = "Utilidad: ${bundle.toolUtility}",
-                style = MaterialTheme.typography.labelSmall
             )
             Text(
                 text = bundle.utilitySummary,

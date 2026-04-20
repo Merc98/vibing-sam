@@ -21,6 +21,12 @@ class MainViewModel(
         val description: String
     )
 
+    private data class StarterFile(
+        val fileName: String,
+        val extension: String,
+        val content: String
+    )
+
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
@@ -77,8 +83,11 @@ class MainViewModel(
     }
 
     private fun loadAvailableModels() {
-        _availableModels.value = aiRepository.getAvailableModels()
-        _selectedModel.value = _availableModels.value.firstOrNull()
+        val models = aiRepository.getAvailableModels()
+        _availableModels.value = models
+        _selectedModel.value = models.firstOrNull { it.type == AIModelType.LOCAL_SMART_ASSIST }
+            ?: models.firstOrNull { it.type == AIModelType.LOCAL_QUICK_HELP }
+            ?: models.firstOrNull()
     }
 
     fun createNewProject(name: String) {
@@ -137,6 +146,33 @@ class MainViewModel(
         }
     }
 
+    fun appendToCurrentFile(content: String) {
+        val currentFileValue = _currentFile.value ?: run {
+            _uiState.value = _uiState.value.copy(error = "Open a file first to insert generated content.")
+            return
+        }
+        val separator = if (currentFileValue.content.isBlank()) "" else "\n\n"
+        updateFileContent(currentFileValue.content + separator + content)
+        _uiState.value = _uiState.value.copy(message = "Generated content inserted into ${currentFileValue.name}.${currentFileValue.extension}")
+    }
+
+    fun replaceCurrentFileWithContent(content: String) {
+        val currentFileValue = _currentFile.value ?: run {
+            _uiState.value = _uiState.value.copy(error = "Open a file first to replace its content.")
+            return
+        }
+        updateFileContent(content)
+        _uiState.value = _uiState.value.copy(message = "${currentFileValue.name}.${currentFileValue.extension} updated with generated content")
+    }
+
+    fun openProjectFileByName(fileName: String, extension: String) {
+        val project = _currentProject.value ?: return
+        val found = project.files.firstOrNull { it.name == fileName && it.extension == extension }
+        if (found != null) {
+            _currentFile.value = found
+        }
+    }
+
     fun saveFileToDownloads(fileName: String, content: String, extension: String) {
         viewModelScope.launch {
             val result = fileRepository.saveFileToDownloads(fileName, content, extension)
@@ -176,14 +212,20 @@ class MainViewModel(
                 
                 // Also update the in-memory project file list
                 try {
+                    val existingIndex = currentProject.files.indexOfFirst { it.name == fileName && it.extension == extension }
                     val newFile = fileRepository.createNewFile(fileName, extension).copy(
                         content = codeContent,
                         isModified = false
                     )
-                    
-                    currentProject.files.add(newFile)
+                    if (existingIndex >= 0) {
+                        currentProject.files[existingIndex] = newFile
+                    } else {
+                        currentProject.files.add(newFile)
+                    }
                     fileRepository.saveProject(currentProject)
                     loadProjects()
+                    _currentProject.value = currentProject.copy()
+                    _currentFile.value = newFile
                 } catch (e: Exception) {
                     // Handle error silently - file is already saved to disk
                 }
@@ -193,6 +235,209 @@ class MainViewModel(
                     isLoading = false
                 )
             }
+        }
+    }
+
+    fun generateStarterWebApp() {
+        val projectName = "web_app_${System.currentTimeMillis()}"
+        createStarterProject(
+            projectName = projectName,
+            files = listOf(
+                StarterFile(
+                    "index",
+                    "html",
+                    """
+                    <!doctype html>
+                    <html lang="en">
+                    <head>
+                      <meta charset="UTF-8" />
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                      <title>$projectName</title>
+                      <link rel="stylesheet" href="styles.css" />
+                    </head>
+                    <body>
+                      <main class="app-shell">
+                        <h1>$projectName</h1>
+                        <p>Your starter web app is ready.</p>
+                        <button id="actionButton">Run starter action</button>
+                        <section id="output"></section>
+                      </main>
+                      <script src="app.js"></script>
+                    </body>
+                    </html>
+                    """.trimIndent()
+                ),
+                StarterFile(
+                    "styles",
+                    "css",
+                    """
+                    :root {
+                      color-scheme: dark;
+                      font-family: Inter, system-ui, sans-serif;
+                    }
+
+                    body {
+                      margin: 0;
+                      min-height: 100vh;
+                      display: grid;
+                      place-items: center;
+                      background: #0b1220;
+                      color: #f5f7ff;
+                    }
+
+                    .app-shell {
+                      width: min(92vw, 560px);
+                      padding: 24px;
+                      border-radius: 24px;
+                      background: rgba(255, 255, 255, 0.08);
+                      backdrop-filter: blur(10px);
+                      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+                    }
+
+                    button {
+                      margin-top: 12px;
+                      border: 0;
+                      border-radius: 999px;
+                      padding: 12px 18px;
+                      cursor: pointer;
+                    }
+                    """.trimIndent()
+                ),
+                StarterFile(
+                    "app",
+                    "js",
+                    """
+                    const output = document.getElementById('output');
+                    document.getElementById('actionButton').addEventListener('click', () => {
+                      output.innerHTML = '<p>Starter action executed successfully.</p>';
+                    });
+                    """.trimIndent()
+                )
+            ),
+            successMessage = "Starter web app created"
+        )
+    }
+
+    fun generateStarterPwaApp() {
+        val projectName = "pwa_app_${System.currentTimeMillis()}"
+        createStarterProject(
+            projectName = projectName,
+            files = listOf(
+                StarterFile(
+                    "index",
+                    "html",
+                    """
+                    <!doctype html>
+                    <html lang="en">
+                    <head>
+                      <meta charset="UTF-8" />
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                      <meta name="theme-color" content="#111827" />
+                      <link rel="manifest" href="manifest.json" />
+                      <title>$projectName</title>
+                    </head>
+                    <body>
+                      <main>
+                        <h1>$projectName</h1>
+                        <p>Installable web app starter.</p>
+                      </main>
+                      <script src="app.js"></script>
+                    </body>
+                    </html>
+                    """.trimIndent()
+                ),
+                StarterFile(
+                    "app",
+                    "js",
+                    """
+                    if ('serviceWorker' in navigator) {
+                      window.addEventListener('load', async () => {
+                        try {
+                          await navigator.serviceWorker.register('./sw.js');
+                          console.log('Service worker registered');
+                        } catch (error) {
+                          console.error('Service worker registration failed', error);
+                        }
+                      });
+                    }
+                    """.trimIndent()
+                ),
+                StarterFile(
+                    "manifest",
+                    "json",
+                    """
+                    {
+                      "name": "$projectName",
+                      "short_name": "Starter PWA",
+                      "start_url": "./index.html",
+                      "display": "standalone",
+                      "background_color": "#111827",
+                      "theme_color": "#111827",
+                      "icons": []
+                    }
+                    """.trimIndent()
+                ),
+                StarterFile(
+                    "sw",
+                    "js",
+                    """
+                    self.addEventListener('install', event => {
+                      self.skipWaiting();
+                    });
+
+                    self.addEventListener('activate', event => {
+                      event.waitUntil(self.clients.claim());
+                    });
+                    """.trimIndent()
+                )
+            ),
+            successMessage = "Starter installable web app created"
+        )
+    }
+
+    private fun createStarterProject(
+        projectName: String,
+        files: List<StarterFile>,
+        successMessage: String
+    ) {
+        createNewProject(projectName)
+        val project = _currentProject.value ?: return
+
+        viewModelScope.launch {
+            val createdFiles = mutableListOf<CodeFile>()
+            for (file in files) {
+                val result = fileRepository.saveFileToProject(
+                    projectName = projectName,
+                    fileName = file.fileName,
+                    content = file.content,
+                    extension = file.extension
+                )
+                result.onSuccess {
+                    createdFiles.add(
+                        fileRepository.createNewFile(file.fileName, file.extension).copy(
+                            content = file.content,
+                            isModified = false
+                        )
+                    )
+                }.onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        error = "Failed to generate ${file.fileName}.${file.extension}: ${error.message}",
+                        isLoading = false
+                    )
+                    return@launch
+                }
+            }
+
+            project.files.clear()
+            project.files.addAll(createdFiles)
+            fileRepository.saveProject(project)
+            loadProjects()
+            _currentProject.value = project.copy()
+            _currentFile.value = createdFiles.firstOrNull()
+            _uiState.value = _uiState.value.copy(
+                message = "$successMessage: $projectName",
+                isLoading = false
+            )
         }
     }
 
