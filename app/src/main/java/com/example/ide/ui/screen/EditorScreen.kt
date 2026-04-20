@@ -116,6 +116,21 @@ fun EditorScreen(viewModel: MainViewModel) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = "Quick Insert")
                 }
 
+                val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+                IconButton(
+                    onClick = {
+                        currentFile?.let {
+                            clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(it.content))
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Copied ${it.name}.${it.extension}")
+                            }
+                        }
+                    },
+                    enabled = currentFile != null
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy content")
+                }
+
                 currentFile?.let { file ->
                     if (file.extension.equals("html", ignoreCase = true)) {
                         IconButton(
@@ -171,64 +186,71 @@ fun EditorScreen(viewModel: MainViewModel) {
             onOpenQuickInsert = { showQuickInsertDialog = true }
         )
 
-        Divider()
+        HorizontalDivider()
 
-        Row(modifier = Modifier.fillMaxSize()) {
-            val project = currentProject
-            if (project != null && project.files.isNotEmpty()) {
-                LazyColumn(
-                    modifier = Modifier
-                        .width(200.dp)
-                        .fillMaxHeight()
-                        .padding(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    items(project.files) { file ->
-                        FileItem(
-                            file = file,
-                            isSelected = file.id == currentFile?.id,
-                            onClick = { viewModel.selectFile(file) },
-                            onDeleteFile = { fileToDelete ->
-                                viewModel.deleteFileFromProject(
-                                    project.name,
-                                    fileToDelete.name,
-                                    fileToDelete.extension
-                                )
-
-                                val updatedProject = project.copy()
-                                updatedProject.files.removeIf { it.id == fileToDelete.id }
-                                viewModel.openProject(updatedProject)
-                            }
-                        )
-                    }
-                }
-
-                VerticalDivider()
-            }
-
-            Box(modifier = Modifier.fillMaxSize()) {
-                val file = currentFile
-                if (file != null) {
-                    CodeEditor(
+        val project = currentProject
+        if (project != null && project.files.isNotEmpty()) {
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(project.files) { file ->
+                    FileTab(
                         file = file,
-                        onContentChange = { viewModel.updateFileContent(it) }
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.Description,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.outline
+                        isSelected = file.id == currentFile?.id,
+                        onClick = { viewModel.selectFile(file) },
+                        onDelete = {
+                            viewModel.deleteFileFromProject(
+                                project.name,
+                                file.name,
+                                file.extension
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            val updatedProject = project.copy()
+                            updatedProject.files.removeIf { it.id == file.id }
+                            viewModel.openProject(updatedProject)
+                        }
+                    )
+                }
+            }
+            HorizontalDivider()
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            val file = currentFile
+            if (file != null) {
+                CodeEditor(
+                    file = file,
+                    onContentChange = { viewModel.updateFileContent(it) }
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Description,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "No file selected",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        if (project != null && project.files.isEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "No file selected",
-                                style = MaterialTheme.typography.bodyLarge,
+                                "Tap + to create a file or use Quick actions above.",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
                         }
@@ -467,7 +489,7 @@ private fun QuickInsertDialog(
 private fun defaultSnippetForExtension(extension: String): String {
     return when (extension) {
         "html" -> """
-            <section class=\"generated-panel\">
+            <section class="generated-panel">
               <h2>Generated section</h2>
               <p>This block was inserted from the editor tools.</p>
             </section>
@@ -486,10 +508,97 @@ private fun defaultSnippetForExtension(extension: String): String {
         """.trimIndent()
         "kt" -> """
             fun generatedHelperMessage(): String {
-                return \"Generated Kotlin helper ready\"
+                return "Generated Kotlin helper ready"
             }
         """.trimIndent()
+        "py" -> """
+            def generated_helper() -> str:
+                return "Generated Python helper ready"
+        """.trimIndent()
+        "json" -> """
+            {
+              "generated": true,
+              "note": "Replace with your data"
+            }
+        """.trimIndent()
+        "md" -> """
+            # Generated section
+
+            - update me
+            - save me
+            - ship me
+        """.trimIndent()
         else -> "Generated content block\n- update me\n- save me\n- run me"
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FileTab(
+    file: CodeFile,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val bg = if (isSelected)
+        MaterialTheme.colorScheme.primaryContainer
+    else
+        MaterialTheme.colorScheme.surfaceVariant
+    val fg = if (isSelected)
+        MaterialTheme.colorScheme.onPrimaryContainer
+    else
+        MaterialTheme.colorScheme.onSurfaceVariant
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    Surface(
+        color = bg,
+        shape = MaterialTheme.shapes.large,
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Description,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = fg
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "${file.name}.${file.extension}${if (file.isModified) " •" else ""}",
+                style = MaterialTheme.typography.labelMedium,
+                color = fg
+            )
+            IconButton(onClick = { showDeleteDialog = true }, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Delete ${file.name}",
+                    modifier = Modifier.size(14.dp),
+                    tint = fg
+                )
+            }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete File") },
+            text = { Text("Delete '${file.name}.${file.extension}'? This cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    }
+                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
