@@ -98,6 +98,8 @@ dependencies {
     implementation(libs.apksig)
     implementation(libs.commons.compress)
     implementation(libs.xz)
+    implementation(libs.jadx.core)
+    implementation(libs.jadx.dex.input)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
