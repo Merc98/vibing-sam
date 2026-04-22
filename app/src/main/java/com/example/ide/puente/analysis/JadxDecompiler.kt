@@ -34,7 +34,7 @@ object JadxDecompiler {
 
         return@withContext try {
             val args = JadxArgs().apply {
-                inputFile = apkFile
+                setInputFile(apkFile)
                 outDir = outputDir
                 isShowInconsistentCode = true
                 isDeobfuscationOn = false
