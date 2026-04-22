@@ -280,11 +280,11 @@ fun StaticAnalysisScreen(targetId: String) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(240.dp),
+                        .height(220.dp),
                     contentPadding = PaddingValues(12.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(fileTree) { entry ->
+                    items(fileTree) { entry: String ->
                         Text(entry, style = MaterialTheme.typography.bodySmall)
                     }
                 }
