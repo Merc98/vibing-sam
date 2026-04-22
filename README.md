@@ -210,7 +210,7 @@ This repo now includes an Actions workflow:
 `.github/workflows/android-apk.yml`
 
 What it does:
-- Builds **Debug APK** automatically on push (`main` / `work`)
+- Builds **Debug APK** automatically on push (`main` / `master` / `replit-version`)
 - Supports manual run (`workflow_dispatch`) with option for `debug` or `release`
 - Uploads generated APK as GitHub Actions artifact
 

@@ -1,14 +1,28 @@
-name: Android Debug APK
+name: Android APK Build
 
 on:
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: Tipo de APK a generar
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
+          - release
   push:
-    branches: [ main, master, "replit-version" ]
+    branches:
+      - main
+      - master
+      - replit-version
   pull_request:
 
 jobs:
-  build-debug-apk:
+  build-apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -27,12 +41,26 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Build debug APK
+      - name: Build debug APK (default for push/PR)
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'debug' }}
         run: ./gradlew --no-daemon assembleDebug --stacktrace
 
+      - name: Build release APK (manual)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
+        run: ./gradlew --no-daemon assembleRelease --stacktrace
+
       - name: Upload debug APK
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'debug' }}
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload release APK
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
