@@ -29,11 +29,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.ide.data.model.AIModelType
-import com.example.ide.data.repository.AIRepository
 import com.example.ide.puente.analysis.AnalysisPreflight
 import com.example.ide.puente.analysis.JadxDecompiler
-import com.example.ide.puente.analysis.LlmPatchOrchestrator
 import com.example.ide.puente.analysis.NativeDecompiler
 import com.example.ide.puente.data.TargetStore
 import com.example.ide.puente.exec.ApktoolRunner
@@ -61,20 +58,10 @@ fun StaticAnalysisScreen(targetId: String) {
     var nativeSymbolOrAddress by remember { mutableStateOf("main") }
     var preflight by remember { mutableStateOf(target?.let { AnalysisPreflight.snapshot(context, it) }) }
 
-    // AI patch workflow states
-    var patchGoal by remember { mutableStateOf("Cambiar texto de onboarding y habilitar endpoint de staging") }
-    var apiKey by remember { mutableStateOf("") }
-    var modelId by remember { mutableStateOf("OPENROUTER_AUTO") }
-    var patchPreview by remember { mutableStateOf<LlmPatchOrchestrator.PreviewResult?>(null) }
-
     if (target == null) {
         Text("Target $targetId not found", modifier = Modifier.padding(16.dp))
         return
     }
-
-    val decodedDir = remember(targetId) { File(target.workspacePath, "decoded") }
-    val rebuiltApk = remember(targetId) { File(target.workspacePath, "rebuilt_from_ai.apk") }
-    val signedApk = remember(targetId) { File(target.workspacePath, "patched_ai_signed.apk") }
 
     fun appendLog(message: String) {
         val ts = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
@@ -98,17 +85,15 @@ fun StaticAnalysisScreen(targetId: String) {
         } else emptyList()
     }
 
-    fun autoDetectNativeSo(dir: File) {
+    fun autoDetectNativeSo(decodedDir: File) {
         if (nativeSoPath.isNotBlank()) return
-        val guess = dir.walkTopDown().firstOrNull { it.isFile && it.extension == "so" }
+        val guess = decodedDir.walkTopDown()
+            .firstOrNull { it.isFile && it.extension == "so" }
         if (guess != null) {
             nativeSoPath = guess.absolutePath
             appendLog("Auto-detected native library: ${guess.name}")
         }
     }
-
-    fun parseModel(input: String): AIModelType = runCatching { AIModelType.valueOf(input.trim().uppercase(Locale.US)) }
-        .getOrDefault(AIModelType.LOCAL_SMART_ASSIST)
 
     Column(
         modifier = Modifier
@@ -117,7 +102,7 @@ fun StaticAnalysisScreen(targetId: String) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            "Static toolchain (apktool + jadx + native + AI patch)",
+            "Static toolchain (apktool + jadx + native)",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -148,7 +133,7 @@ fun StaticAnalysisScreen(targetId: String) {
                             scope.launch {
                                 try {
                                     appendLog("Starting full pipeline")
-                                    decodedDir.apply {
+                                    val decodedDir = File(target.workspacePath, "decoded").apply {
                                         if (exists()) deleteRecursively()
                                         mkdirs()
                                     }
@@ -197,18 +182,18 @@ fun StaticAnalysisScreen(targetId: String) {
                         running = true
                         scope.launch {
                             try {
-                                decodedDir.apply {
+                                val outDir = File(target.workspacePath, "decoded").apply {
                                     if (exists()) deleteRecursively()
                                     mkdirs()
                                 }
                                 val result = ApktoolRunner.run(
                                     context,
-                                    listOf("d", target.apkPath, "-o", decodedDir.absolutePath, "-f")
+                                    listOf("d", target.apkPath, "-o", outDir.absolutePath, "-f")
                                 )
                                 appendLog("apktool decode exit=${result.exitCode}")
                                 if (result.stderr.isNotBlank()) appendLog(result.stderr.take(500))
-                                refreshFileTree(decodedDir)
-                                autoDetectNativeSo(decodedDir)
+                                refreshFileTree(outDir)
+                                autoDetectNativeSo(outDir)
                             } finally {
                                 running = false
                             }
@@ -248,6 +233,11 @@ fun StaticAnalysisScreen(targetId: String) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("3) Native decompilation (r2ghidra-dec)", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Drop r2ghidra-dec in filesDir/bin, then run with .so path and symbol/address.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedTextField(
                     value = nativeSoPath,
                     onValueChange = { nativeSoPath = it },
@@ -283,128 +273,6 @@ fun StaticAnalysisScreen(targetId: String) {
                     }
                 ) {
                     Text("Run native decompile")
-                }
-            }
-        }
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("4) AI patch studio (preview -> verify -> rebuild)", fontWeight = FontWeight.SemiBold)
-                Text(
-                    "Flujo tipo Replit: describes objetivo, generamos preview de cambios, validamos rebuild y luego firmamos APK.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(
-                    value = modelId,
-                    onValueChange = { modelId = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("AIModelType (ej. OPENROUTER_AUTO o LOCAL_SMART_ASSIST)") }
-                )
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = { apiKey = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("API key (si aplica)") }
-                )
-                OutlinedTextField(
-                    value = patchGoal,
-                    onValueChange = { patchGoal = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Objetivo funcional que quieres aplicar") }
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        enabled = !running && decodedDir.exists(),
-                        onClick = {
-                            running = true
-                            scope.launch {
-                                try {
-                                    val preview = LlmPatchOrchestrator.generatePreview(
-                                        decodedDir = decodedDir,
-                                        userGoal = patchGoal,
-                                        model = parseModel(modelId),
-                                        apiKey = apiKey,
-                                        aiRepository = aiRepository
-                                    )
-                                    patchPreview = preview
-                                    if (preview.success) {
-                                        appendLog("AI preview ready: ${preview.items.size} file changes")
-                                    } else {
-                                        appendLog("AI preview failed: ${preview.error}")
-                                    }
-                                } finally {
-                                    running = false
-                                }
-                            }
-                        }
-                    ) { Text("Generate preview") }
-
-                    Button(
-                        enabled = !running && patchPreview?.success == true,
-                        onClick = {
-                            running = true
-                            scope.launch {
-                                try {
-                                    val preview = patchPreview ?: return@launch
-                                    val apply = LlmPatchOrchestrator.applyPlan(decodedDir, preview.rawModelOutput)
-                                    apply.onSuccess { count ->
-                                        appendLog("Applied $count AI file edits")
-                                        refreshFileTree(decodedDir)
-                                    }.onFailure {
-                                        appendLog("Apply failed: ${it.message}")
-                                    }
-                                } finally {
-                                    running = false
-                                }
-                            }
-                        }
-                    ) { Text("Apply edits") }
-                }
-
-                Button(
-                    enabled = !running && decodedDir.exists(),
-                    onClick = {
-                        running = true
-                        scope.launch {
-                            try {
-                                val build = ApktoolRunner.run(
-                                    context,
-                                    listOf("b", decodedDir.absolutePath, "-o", rebuiltApk.absolutePath)
-                                )
-                                appendLog("Rebuild result exit=${build.exitCode}")
-                                if (build.stderr.isNotBlank()) appendLog(build.stderr.take(800))
-                                if (build.exitCode == 0 && rebuiltApk.exists()) {
-                                    val sign = withContext(Dispatchers.IO) {
-                                        PuenteSigner.zipAlignAndSign(context, rebuiltApk, signedApk)
-                                    }
-                                    appendLog(sign.detail)
-                                }
-                            } finally {
-                                running = false
-                            }
-                        }
-                    }
-                ) {
-                    Text("Verify + rebuild + sign APK")
-                }
-
-                patchPreview?.let { preview ->
-                    Text(
-                        text = if (preview.success) "Preview: ${preview.summary}" else "Preview error: ${preview.error}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (preview.success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                    )
-                    preview.items.take(4).forEach { item ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text(item.path, fontWeight = FontWeight.SemiBold)
-                                Text(item.reason, style = MaterialTheme.typography.bodySmall)
-                                Text("--- before ---\n${item.beforeSnippet}", style = MaterialTheme.typography.bodySmall)
-                                Text("--- after ---\n${item.afterSnippet}", style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
                 }
             }
         }
