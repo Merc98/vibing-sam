@@ -34,7 +34,10 @@ import com.example.ide.puente.analysis.JadxDecompiler
 import com.example.ide.puente.analysis.NativeDecompiler
 import com.example.ide.puente.data.TargetStore
 import com.example.ide.puente.exec.ApktoolRunner
+import com.example.ide.puente.sign.PuenteSigner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -46,6 +49,7 @@ fun StaticAnalysisScreen(targetId: String) {
     val store = remember { TargetStore.get(context) }
     val target = remember(targetId) { store.find(targetId) }
     val scope = rememberCoroutineScope()
+    val aiRepository = remember { AIRepository() }
 
     var running by remember { mutableStateOf(false) }
     var logLines by remember { mutableStateOf("") }
@@ -280,7 +284,7 @@ fun StaticAnalysisScreen(targetId: String) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(240.dp),
+                        .height(220.dp),
                     contentPadding = PaddingValues(12.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {

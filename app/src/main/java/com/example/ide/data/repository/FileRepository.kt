@@ -2,6 +2,7 @@ package com.example.ide.data.repository
 
 import android.content.Context
 import android.os.Environment
+import android.util.Log
 import com.example.ide.data.model.CodeFile
 import com.example.ide.data.model.FileExtension
 import com.example.ide.data.model.Project
@@ -33,10 +34,23 @@ class FileRepository(
     private val gson = Gson()
     private val projectsFile = File(context.filesDir, "projects.json")
     
-    // Create a projects directory in Downloads
-    private val projectsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "IDEProjects")
-    private val patchBundlesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "IDEPatches")
+    // Prefer app-scoped external storage (works on Android 10+ without legacy storage perms).
+    // Fallback to internal filesDir when external storage is unavailable.
+    private val projectsDir = resolveWritableRoot("IDEProjects")
+    private val patchBundlesDir = resolveWritableRoot("IDEPatches")
     
+
+    private fun resolveWritableRoot(folderName: String): File {
+        val appScopedBase = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+            ?: context.filesDir
+        val target = File(appScopedBase, folderName)
+        if (!target.exists() && !target.mkdirs()) {
+            Log.w(TAG, "Failed to create $folderName at ${target.absolutePath}, fallback to filesDir")
+            return File(context.filesDir, folderName).apply { mkdirs() }
+        }
+        return target
+    }
+
     init {
         // Ensure the projects directory exists
         if (!projectsDir.exists()) {
@@ -548,4 +562,9 @@ body {
         }
     }
 
+
+
+    companion object {
+        private const val TAG = "FileRepository"
+    }
 }
