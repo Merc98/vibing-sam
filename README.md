@@ -18,7 +18,7 @@ A powerful, feature-rich Android IDE that transforms your mobile device into a p
 ### 🚀 Professional IDE Capabilities
 - **Multi-language Support**: 20+ programming languages including HTML, CSS, JS, TS, Python, Java, Kotlin, C/C++, C#, PHP, Ruby, Go, Rust, Swift, SQL, JSON, XML, YAML, Markdown
 - **Project Management**: Create, organize, and manage multiple coding projects
-- **Smart File System**: Automatic project folder organization in Downloads/IDEProjects
+- **Smart File System**: Automatic project folder organization in app-scoped Documents/IDEProjects (Android 10+ safe)
 - **Code Templates**: Auto-generated templates for rapid development start
 - **Export Functionality**: Save files directly to device storage
 
@@ -86,6 +86,15 @@ Connect with the world's most powerful AI models for real-time coding assistance
 3. Sync Gradle dependencies
 4. Build and run on your Android device or emulator
 
+
+### 🧩 Local Build Setup (Android SDK path)
+Before running Gradle locally, copy the SDK template:
+
+```bash
+cp local.properties.example local.properties
+# then edit sdk.dir
+```
+
 ### 🔑 API Key Setup
 To unlock AI features, configure API keys in the Settings panel:
 
@@ -110,7 +119,7 @@ To unlock AI features, configure API keys in the Settings panel:
 1. Navigate to the **Projects** tab
 2. Tap the **+** button to create a new project
 3. Enter a descriptive project name
-4. Files are automatically organized in `Downloads/IDEProjects/[ProjectName]`
+4. Files are automatically organized in `Android/data/<package>/files/Documents/IDEProjects/[ProjectName]`
 
 ### ✏️ Code Editing
 1. Open a project in the **Editor** tab
@@ -165,8 +174,7 @@ app/src/main/java/com/example/ide/
 
 ## 🔐 Permissions Required
 - **INTERNET** - For AI API communications
-- **WRITE_EXTERNAL_STORAGE** - For saving projects to Downloads folder
-- **READ_EXTERNAL_STORAGE** - For accessing project files
+- **REQUEST_INSTALL_PACKAGES** - For installing rebuilt APKs from inside the app
 
 ## 🛣️ Roadmap & Future Features
 - [ ] **Syntax Highlighting** - Language-aware code coloring
