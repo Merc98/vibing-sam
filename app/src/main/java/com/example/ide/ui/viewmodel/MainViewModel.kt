@@ -801,6 +801,14 @@ class MainViewModel(
     fun clearMessage() {
         _uiState.value = _uiState.value.copy(message = null)
     }
+    
+    // G4F Authentication state
+    private val _isG4FAuthenticated = MutableStateFlow(false)
+    val isG4FAuthenticated: StateFlow<Boolean> = _isG4FAuthenticated.asStateFlow()
+    
+    fun setG4FAuthenticated(authenticated: Boolean) {
+        _isG4FAuthenticated.value = authenticated
+    }
 }
 
 data class MainUiState(
