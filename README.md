@@ -1,260 +1,162 @@
-# 📱 Mobile IDE - Professional Android Code Editor with AI Assistance
+# 📱 VibeCode Mobile - AI-Powered Code Editor with Vibing Code Concept
 
 [![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://www.android.com)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-blue.svg)](https://kotlinlang.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![API](https://img.shields.io/badge/API-24%2B-brightgreen.svg)](https://android-arsenal.com/api?level=24)
 
-A powerful, feature-rich Android IDE that transforms your mobile device into a professional coding environment with integrated AI assistance from leading models.
+A revolutionary mobile IDE that brings **Vibing Code** concept to life - an AI-first development environment where your chat with the agent is the central hub for all coding activities.
 
-<p align="center">
-  <img src="https://user-images.githubusercontent.com/placeholder-mobile-ide-screenshot.png" width="200" alt="Mobile IDE Screenshot"/>
-  <img src="https://user-images.githubusercontent.com/placeholder-ai-chat-screenshot.png" width="200" alt="AI Chat Screenshot"/>
-  <img src="https://user-images.githubusercontent.com/placeholder-code-editor-screenshot.png" width="200" alt="Code Editor Screenshot"/>
-</p>
+## 🌟 The VibeCode Concept
 
-## 🌟 Key Features
+**Vibing Code** is not just another IDE - it's a paradigm shift where:
 
-### 🚀 Professional IDE Capabilities
-- **Multi-language Support**: 20+ programming languages including HTML, CSS, JS, TS, Python, Java, Kotlin, C/C++, C#, PHP, Ruby, Go, Rust, Swift, SQL, JSON, XML, YAML, Markdown
-- **Project Management**: Create, organize, and manage multiple coding projects
-- **Smart File System**: Automatic project folder organization in Downloads/IDEProjects
-- **Code Templates**: Auto-generated templates for rapid development start
-- **Export Functionality**: Save files directly to device storage
+1. **Chat-Centric Development**: Everything starts from a conversation with your AI agent
+2. **Context-Aware Assistance**: The AI understands your projects, installed apps, and code
+3. **Seamless Integration**: Insert programs, analyze APKs, refactor code - all from the chat
+4. **No More Tool Fragmentation**: All your development tools unified in one place
 
-### 🤖 Advanced AI Integration
-Connect with the world's most powerful AI models for real-time coding assistance:
+## 🚀 Key Features
 
-#### 🟢 OpenAI
-- **GPT-4** - Most capable model for complex coding tasks
-- **GPT-3.5 Turbo** - Fast and efficient for quick assistance
-
-#### 🟣 Anthropic Claude
-- **Claude 3 Opus** - Most powerful for intricate programming challenges
-- **Claude 3 Sonnet** - Balanced performance and speed
-- **Claude 3 Haiku** - Lightning-fast for simple queries
-
-#### 🔵 Google Gemini
-- **Gemini Pro** - Advanced AI for comprehensive coding help
-- **Gemini 1.5 Flash** - Efficient for rapid responses
-
-#### 🔶 Additional Models
-- Cohere Command
-- Mistral Large & Medium
-- Meta Llama 2 70B
-- Code Llama 34B (Specialized for coding)
-- **OpenRouter Support** - Automatic model routing
-- **Chinese Free Models**: Lingma, Qwen, Longcat AI, DeepSeek, Z, Kimi
-
-### 💬 Intelligent AI Chat
-- **Context-Aware Assistance**: AI understands your current file and project context
-- **Code Snippet Management**: Save AI-generated code directly to project folders
-- **Smart Language Detection**: Automatically assigns correct file extensions
-- **Real-time Conversation**: Interactive chat with multiple AI models
-- **Error Handling**: Robust error management and user feedback
-- **Slash Commands**: Type `/` in chat for quick actions (`/models`, `/model`, `/settings`, `/insert_script`, `/refactor`, `/debug`, `/test`)
-
-### 🎨 Modern Mobile UI
-- **Material Design 3**: Clean, intuitive interface following latest design guidelines
-- **Responsive Layout**: Optimized for all screen sizes and orientations
-- **Dark/Light Themes**: Automatic theme switching based on system preferences
-- **Touch-Optimized**: Controls designed specifically for mobile interaction
-- **Tabbed Navigation**: Seamless switching between Projects, Editor, AI Chat, and Settings
-
-## 📸 Screenshots
-
-<div style="display: flex; justify-content: space-around;">
-  <img src="https://user-images.githubusercontent.com/placeholder-projects-screen.png" width="200" alt="Projects Screen"/>
-  <img src="https://user-images.githubusercontent.com/placeholder-editor-screen.png" width="200" alt="Code Editor"/>
-  <img src="https://user-images.githubusercontent.com/placeholder-chat-screen.png" width="200" alt="AI Chat Interface"/>
-  <img src="https://user-images.githubusercontent.com/placeholder-settings-screen.png" width="200" alt="Settings Panel"/>
-</div>
-
-## ⚡ Quick Start
-
-### 📋 Prerequisites
-- Android device running Android 7.0 (API level 24) or higher
-- Android Studio for development (optional)
-- API keys for desired AI models
-
-### 🛠️ Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/mobile-ide.git
-   ```
-2. Open in Android Studio
-3. Sync Gradle dependencies
-4. Build and run on your Android device or emulator
-
-### 🔑 API Key Setup
-To unlock AI features, configure API keys in the Settings panel:
-
-#### OpenAI
-1. Visit [OpenAI API Keys](https://platform.openai.com/api-keys)
-2. Generate a new API key
-3. Add to Settings > API Keys > OpenAI
-
-#### Anthropic Claude
-1. Visit [Anthropic Console](https://console.anthropic.com/)
-2. Create and copy your API key
-3. Add to Settings > API Keys > Anthropic
-
-#### Google Gemini
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create an API key
-3. Add to Settings > API Keys > Google
-
-## 🎯 Usage Guide
+### 💬 VibeCode Chat (The Heart of the Experience)
+- **Context-Aware AI**: Works with your current file and project automatically
+- **Slash Commands**: 
+  - `/refactor`, `/debug`, `/test` - Code improvement commands
+  - `/insert_script` - Insert safe script templates
+  - `/model <name>` - Switch AI models quickly
+  - `/analyze_app <package>` - Analyze installed apps
+  - `/decompile_apk <path>` - Decompile APK files
+  - `/list_apps` - Browse installed applications
+  - `/tool <id>` - Execute development tools
+- **Multi-Model Support**: OpenAI GPT-4, Claude 3, Gemini Pro, and more
+- **Code Insertion**: Directly insert AI-generated code into your projects
+- **APK Analysis**: Analyze installed apps or APK files through chat
+- **Tool Integration**: Execute vibing_apk_lab tools for decompilation, analysis, etc.
 
 ### 📁 Project Management
-1. Navigate to the **Projects** tab
-2. Tap the **+** button to create a new project
-3. Enter a descriptive project name
-4. Files are automatically organized in `Downloads/IDEProjects/[ProjectName]`
+- Create and manage multiple coding projects
+- Auto-organization in Downloads/IDEProjects
+- Support for 20+ programming languages
+- File templates for quick starts
 
-### ✏️ Code Editing
-1. Open a project in the **Editor** tab
-2. Create new files with the **+** toolbar icon
-3. Select from 20+ supported file types
-4. Enjoy syntax-aware editing experience
+### 📱 Installed Apps Integration
+- Browse all installed applications on your device
+- Search and filter by name or package
+- View app details (version, package name, APK path)
+- **Direct integration with VibeCode Chat**: Select an app and ask the AI to analyze it
+- No more manual path copying - click to analyze
 
-### 🤖 AI Assistance
-1. Switch to the **AI Chat** tab
-2. Select your preferred model in **Settings**
-3. Enter your API key for the chosen provider
-4. Ask coding questions or request help with current file
-5. Save useful code snippets with one tap
+### ✏️ Smart Code Editor
+- Syntax-aware editing experience
+- Multi-language support (HTML, CSS, JS, Python, Java, Kotlin, etc.)
+- Auto-save to project folders
+- Export functionality
 
-#### Chat Quick Actions
-- Type `/` to open in-chat command suggestions
-- Use `/model <name>` to switch AI model without leaving chat
-- Use `/insert_script` to insert a safe automation template directly into the current project
-- Use `/refactor`, `/debug`, and `/test` to trigger fast coding-assistant flows
+### 🤖 AI Models Supported
+- **OpenAI**: GPT-4, GPT-3.5 Turbo
+- **Anthropic**: Claude 3 Opus/Sonnet/Haiku
+- **Google**: Gemini Pro, Gemini 1.5 Flash
+- **Others**: Cohere, Mistral, Llama, CodeLlama
+- **Chinese Models**: Qwen, DeepSeek, Kimi (via OpenRouter)
 
-### 💾 File Operations
-- **Auto-save**: Files automatically saved to project folders
-- **Export**: Download button saves to Downloads folder
-- **Run HTML**: Direct browser preview for web files
-- **Delete/Undo**: Comprehensive file management with undo capability
+## 🏗️ Clean Architecture
 
-## 🏗️ Technical Architecture
-
-### 🧰 Built With
-- **[Kotlin](https://kotlinlang.org)** - Modern, concise programming language
-- **[Jetpack Compose](https://developer.android.com/jetpack/compose)** - Modern toolkit for native UI
-- **[Material Design 3](https://m3.material.io)** - Latest design system from Google
-- **[Retrofit](https://square.github.io/retrofit/)** - Type-safe HTTP client
-- **[Gson](https://github.com/google/gson)** - JSON serialization/deserialization
-- **[Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html)** - Asynchronous programming
-- **[ViewModel & StateFlow](https://developer.android.com/topic/libraries/architecture/viewmodel)** - Modern state management
-- **[DataStore](https://developer.android.com/topic/libraries/architecture/datastore)** - Data storage solution
-
-### 📁 Project Structure
 ```
 app/src/main/java/com/example/ide/
 ├── data/
-│   ├── api/          # API service interfaces and models
-│   ├── model/        # Data models and entities
-│   └── repository/   # Data access and business logic
+│   ├── api/              # API services for AI models
+│   ├── local/            # Local repositories (DeviceAppRepository)
+│   ├── model/            # Data models
+│   └── repository/       # Business logic repositories
 ├── ui/
-│   ├── screen/       # Jetpack Compose UI screens
-│   ├── viewmodel/    # ViewModels for UI state management
-│   └── theme/        # Material Design 3 theming
-└── di/               # Dependency injection setup
+│   ├── screen/           # Jetpack Compose screens
+│   │   ├── ChatScreen.kt         # VibeCode Chat (central hub)
+│   │   ├── ProjectsScreen.kt     # Project management
+│   │   ├── EditorScreen.kt       # Code editor
+│   │   ├── InstalledAppsScreen.kt # App browser & analyzer
+│   │   └── SettingsScreen.kt     # Configuration
+│   ├── viewmodel/        # State management
+│   └── theme/            # Material Design 3 theming
+└── di/                   # Dependency injection
 ```
 
-## 🔐 Permissions Required
-- **INTERNET** - For AI API communications
-- **WRITE_EXTERNAL_STORAGE** - For saving projects to Downloads folder
-- **READ_EXTERNAL_STORAGE** - For accessing project files
+## ⚡ Quick Start
 
-## 🛣️ Roadmap & Future Features
-- [ ] **Syntax Highlighting** - Language-aware code coloring
-- [ ] **IntelliSense** - Code completion and suggestions
-- [ ] **Git Integration** - Version control within the app
-- [ ] **Plugin System** - Extend functionality with plugins
-- [ ] **Collaborative Editing** - Real-time collaborative coding
-- [ ] **Advanced Debugging** - Integrated debugging tools
-- [ ] **Terminal Emulator** - Built-in command line interface
-- [ ] **Cloud Sync** - Sync projects across devices
+### Prerequisites
+- Android 7.0+ (API 24)
+- API keys for your preferred AI models
 
-## 🧪 Vibing APK Lab (Safe Inspector)
-For security testing and debugging on apps you own (or are explicitly authorized to assess), this repo includes:
+### Setup
+1. Clone the repository
+2. Open in Android Studio
+3. Sync Gradle dependencies
+4. Build and run
 
-`tools/vibing_apk_lab.py`
+### Configure AI
+1. Go to Settings
+2. Add your API keys (OpenAI, Anthropic, Google, etc.)
+3. Select your preferred model
+4. Start vibing!
 
-What it does:
-- Validates if local reverse-engineering/build tools are installed (`apktool`, `jadx`, `zipalign`, `apksigner`, `java`, `adb`)
-- Inspects APK structure (manifest presence, dex files, ABIs, resources count)
-- Optionally exports decode/decompile outputs into a local workspace for manual review
-- Generates a machine-readable `report.json`
-- Can list installed packages via ADB and inspect package metadata (`version`, `debuggable` flag, install paths)
+## 🎯 How to Use VibeCode
 
-What it does **not** do:
-- No payload injection
-- No smali auto-hooking
-- No bypass/cracking routines
+### 1. Start a Project
+- Navigate to **Projects** tab
+- Create a new project or generate a starter web app/PWA
 
-Example:
-```bash
-python tools/vibing_apk_lab.py ./my_app.apk --decode --decompile
-python tools/vibing_apk_lab.py --list-packages
-python tools/vibing_apk_lab.py --package com.example.app
+### 2. Open the Chat
+- Switch to **VibeCode Chat** tab (this is where the magic happens)
+- The AI already knows your current project and file
+
+### 3. Browse Installed Apps (Optional)
+- Go to **Installed Apps** tab
+- Search for any app on your device
+- Tap an app → "Analyze in Chat" → instantly sends context to AI
+
+### 4. Code with AI
+- Ask questions about your code
+- Request refactoring, debugging, or tests
+- Use slash commands for quick actions
+- Insert generated code directly into your files
+
+### Example Workflow
+```
+1. User: Opens Installed Apps, finds "com.example.myapp"
+2. User: Taps "Analyze in Chat" 
+3. Chat auto-fills: "Analyze this APK: /data/app/..."
+4. User: Adds "Check for security issues and suggest improvements"
+5. AI: Provides detailed analysis and code suggestions
+6. User: Clicks to insert suggestions directly into project
+
+OR use slash commands directly in chat:
+- /analyze_app com.example.myapp
+- /decompile_apk /path/to/app.apk
+- /tool vibing_apk_lab_decompose {apk_path}
 ```
 
-Private scope declaration:
-- `docs/DECLARACION_PROYECTO_PRIVADO.md`
+## 🔐 Security Notes
 
-## 📦 APK in GitHub (CI Build)
-This repo now includes an Actions workflow:
-`.github/workflows/android-apk.yml`
+- API keys are stored locally using Android DataStore
+- For production: Implement encryption using AndroidX Security
+- APK analysis is for apps you own or have permission to test
+- No code is sent to external servers except AI API endpoints
 
-What it does:
-- Builds **Debug APK** automatically on push (`main` / `master` / `replit-version`)
-- Supports manual run (`workflow_dispatch`) with option for `debug` or `release`
-- Uploads generated APK as GitHub Actions artifact
+## 🛣️ Roadmap
 
-How to use:
-1. Open **GitHub > Actions > Android APK Build**
-2. Click **Run workflow**
-3. Choose `debug` or `release`
-4. Download artifact: `app-debug-apk` or `app-release-apk`
-
-## 🤝 Contributing
-We welcome contributions from the community! Here's how you can help:
-
-1. **Fork** the repository
-2. Create a **feature branch** (`git checkout -b feature/AmazingFeature`)
-3. **Commit** your changes (`git commit -m 'Add some AmazingFeature'`)
-4. **Push** to the branch (`git push origin feature/AmazingFeature`)
-5. Open a **Pull Request**
-
-Please ensure your code follows our coding standards and includes appropriate tests.
+- [ ] Syntax highlighting in editor
+- [ ] Local AI models support (MLC, llama.cpp)
+- [ ] Real-time collaboration
+- [ ] Git integration
+- [ ] Plugin system
+- [ ] Terminal emulator
+- [ ] Advanced APK analysis tools
 
 ## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙋 Support & Feedback
-Having issues or suggestions? We'd love to hear from you!
-
-- 🐛 **Bug Reports**: [Create an issue](https://github.com/yourusername/mobile-ide/issues/new?assignees=&labels=bug&template=bug_report.md&title=)
-- 💡 **Feature Requests**: [Submit a request](https://github.com/yourusername/mobile-ide/issues/new?assignees=&labels=enhancement&template=feature_request.md&title=)
-- 💬 **General Discussion**: [Start a discussion](https://github.com/yourusername/mobile-ide/discussions)
-
-## 🌟 Show Your Support
-If you find this project useful, please consider:
-
-- ⭐ **Starring** the repository
-- 🐦 **Tweeting** about it
-- 📝 **Writing** a blog post or tutorial
-- 🎥 **Creating** a YouTube video review
+MIT License - see LICENSE file for details.
 
 ---
 
 <p align="center">
-  <strong>Made with ❤️ for developers who code on the go!</strong>
-</p>
-
-<p align="center">
-  <img src="https://user-images.githubusercontent.com/placeholder-footer-icon.png" width="50" alt="Mobile IDE Logo"/>
+  <strong>Made with ❤️ for developers who vibe with code!</strong>
 </p>
