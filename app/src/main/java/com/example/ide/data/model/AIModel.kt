@@ -5,6 +5,8 @@ import com.google.gson.annotations.SerializedName
 enum class AIModelType {
     LOCAL_SMART_ASSIST,
     LOCAL_QUICK_HELP,
+    G4F_FREE_MODELS,
+    HUGGINGFACE_MODELS,
     OPENAI_GPT4,
     OPENAI_GPT35,
     CLAUDE_3_OPUS,

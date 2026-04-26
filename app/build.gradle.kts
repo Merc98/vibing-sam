@@ -1,3 +1,4 @@
+import org.gradle.api.DefaultTask
 import java.net.URL
 import java.security.MessageDigest
 
@@ -99,7 +100,6 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.xz)
     implementation(libs.jadx.core)
-    implementation(libs.jadx.dex.input)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
