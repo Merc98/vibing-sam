@@ -6,7 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Handyman
+import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,19 +36,18 @@ private data class AppDestination(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
-    val context = LocalContext.current
     val viewModel: MainViewModel = viewModel(
-        factory = com.example.ide.di.ViewModelFactory(context)
+        factory = com.example.ide.di.ViewModelFactory()
     )
     val currentProject by viewModel.currentProject.collectAsStateWithLifecycle()
     val currentFile by viewModel.currentFile.collectAsStateWithLifecycle()
 
-    var selectedTab by remember { mutableIntStateOf(3) }
+    var selectedTab by remember { mutableIntStateOf(2) } // Start at AI Chat tab (index 2)
     val destinations = listOf(
         AppDestination("Projects") { Icon(Icons.Default.Folder, contentDescription = "Projects") },
         AppDestination("Editor") { Icon(Icons.Default.Edit, contentDescription = "Editor") },
-        AppDestination("AI Chat") { Icon(Icons.Default.Chat, contentDescription = "AI Chat") },
-        AppDestination("Toolkit") { Icon(Icons.Default.Handyman, contentDescription = "Toolkit") },
+        AppDestination("VibeCode Chat") { Icon(Icons.Default.Chat, contentDescription = "VibeCode Chat") },
+        AppDestination("Installed Apps") { Icon(Icons.Default.Inventory, contentDescription = "Installed Apps") },
         AppDestination("Settings") { Icon(Icons.Default.Settings, contentDescription = "Settings") }
     )
 
@@ -102,7 +101,7 @@ fun MainScreen() {
                 0 -> ProjectsScreen(viewModel)
                 1 -> EditorScreen(viewModel)
                 2 -> ChatScreen(viewModel)
-                3 -> ToolingScreen(viewModel)
+                3 -> InstalledAppsScreen(viewModel)
                 4 -> SettingsScreen(viewModel)
             }
         }
