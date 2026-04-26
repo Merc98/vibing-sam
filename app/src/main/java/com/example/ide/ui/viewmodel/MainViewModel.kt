@@ -7,6 +7,8 @@ import com.example.ide.data.model.*
 import com.example.ide.data.repository.AIRepository
 import com.example.ide.data.repository.FileRepository
 import com.example.ide.data.repository.PatchBundle
+import com.example.ide.data.local.ToolRepository
+import com.example.ide.domain.ChatAction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,7 +16,8 @@ import kotlinx.coroutines.launch
 
 class MainViewModel(
     private val aiRepository: AIRepository,
-    private val fileRepository: FileRepository
+    private val fileRepository: FileRepository,
+    private val toolRepository: ToolRepository
 ) : ViewModel() {
     data class ChatCommandOption(
         val command: String,
@@ -235,208 +238,6 @@ class MainViewModel(
                     isLoading = false
                 )
             }
-        }
-    }
-
-    fun generateStarterWebApp() {
-        val projectName = "web_app_${System.currentTimeMillis()}"
-        createStarterProject(
-            projectName = projectName,
-            files = listOf(
-                StarterFile(
-                    "index",
-                    "html",
-                    """
-                    <!doctype html>
-                    <html lang=\"en\">
-                    <head>
-                      <meta charset=\"UTF-8\" />
-                      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
-                      <title>$projectName</title>
-                      <link rel=\"stylesheet\" href=\"styles.css\" />
-                    </head>
-                    <body>
-                      <main class=\"app-shell\">
-                        <h1>$projectName</h1>
-                        <p>Your starter web app is ready.</p>
-                        <button id=\"actionButton\">Run starter action</button>
-                        <section id=\"output\"></section>
-                      </main>
-                      <script src=\"app.js\"></script>
-                    </body>
-                    </html>
-                    """.trimIndent()
-                ),
-                StarterFile(
-                    "styles",
-                    "css",
-                    """
-                    :root {
-                      color-scheme: dark;
-                      font-family: Inter, system-ui, sans-serif;
-                    }
-
-                    body {
-                      margin: 0;
-                      min-height: 100vh;
-                      display: grid;
-                      place-items: center;
-                      background: #0b1220;
-                      color: #f5f7ff;
-                    }
-
-                    .app-shell {
-                      width: min(92vw, 560px);
-                      padding: 24px;
-                      border-radius: 24px;
-                      background: rgba(255, 255, 255, 0.08);
-                      backdrop-filter: blur(10px);
-                      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-                    }
-
-                    button {
-                      margin-top: 12px;
-                      border: 0;
-                      border-radius: 999px;
-                      padding: 12px 18px;
-                      cursor: pointer;
-                    }
-                    """.trimIndent()
-                ),
-                StarterFile(
-                    "app",
-                    "js",
-                    """
-                    const output = document.getElementById('output');
-                    document.getElementById('actionButton').addEventListener('click', () => {
-                      output.innerHTML = '<p>Starter action executed successfully.</p>';
-                    });
-                    """.trimIndent()
-                )
-            ),
-            successMessage = "Starter web app created"
-        )
-    }
-
-    fun generateStarterPwaApp() {
-        val projectName = "pwa_app_${System.currentTimeMillis()}"
-        createStarterProject(
-            projectName = projectName,
-            files = listOf(
-                StarterFile(
-                    "index",
-                    "html",
-                    """
-                    <!doctype html>
-                    <html lang=\"en\">
-                    <head>
-                      <meta charset=\"UTF-8\" />
-                      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
-                      <meta name=\"theme-color\" content=\"#111827\" />
-                      <link rel=\"manifest\" href=\"manifest.json\" />
-                      <title>$projectName</title>
-                    </head>
-                    <body>
-                      <main>
-                        <h1>$projectName</h1>
-                        <p>Installable web app starter.</p>
-                      </main>
-                      <script src=\"app.js\"></script>
-                    </body>
-                    </html>
-                    """.trimIndent()
-                ),
-                StarterFile(
-                    "app",
-                    "js",
-                    """
-                    if ('serviceWorker' in navigator) {
-                      window.addEventListener('load', async () => {
-                        try {
-                          await navigator.serviceWorker.register('./sw.js');
-                          console.log('Service worker registered');
-                        } catch (error) {
-                          console.error('Service worker registration failed', error);
-                        }
-                      });
-                    }
-                    """.trimIndent()
-                ),
-                StarterFile(
-                    "manifest",
-                    "json",
-                    """
-                    {
-                      \"name\": \"$projectName\",
-                      \"short_name\": \"Starter PWA\",
-                      \"start_url\": \"./index.html\",
-                      \"display\": \"standalone\",
-                      \"background_color\": \"#111827\",
-                      \"theme_color\": \"#111827\"
-                    }
-                    """.trimIndent()
-                ),
-                StarterFile(
-                    "sw",
-                    "js",
-                    """
-                    self.addEventListener('install', event => {
-                      self.skipWaiting();
-                    });
-
-                    self.addEventListener('activate', event => {
-                      event.waitUntil(self.clients.claim());
-                    });
-                    """.trimIndent()
-                )
-            ),
-            successMessage = "Starter installable web app created"
-        )
-    }
-
-    private fun createStarterProject(
-        projectName: String,
-        files: List<StarterFile>,
-        successMessage: String
-    ) {
-        createNewProject(projectName)
-        val project = _currentProject.value ?: return
-
-        viewModelScope.launch {
-            val createdFiles = mutableListOf<CodeFile>()
-            for (file in files) {
-                val result = fileRepository.saveFileToProject(
-                    projectName = projectName,
-                    fileName = file.fileName,
-                    content = file.content,
-                    extension = file.extension
-                )
-                result.onSuccess {
-                    createdFiles.add(
-                        fileRepository.createNewFile(file.fileName, file.extension).copy(
-                            content = file.content,
-                            isModified = false
-                        )
-                    )
-                }.onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        error = "Failed to generate ${file.fileName}.${file.extension}: ${error.message}",
-                        isLoading = false
-                    )
-                    return@launch
-                }
-            }
-
-            project.files.clear()
-            project.files.addAll(createdFiles)
-            fileRepository.saveProject(project)
-            loadProjects()
-            _currentProject.value = project.copy()
-            _currentFile.value = createdFiles.firstOrNull()
-            _uiState.value = _uiState.value.copy(
-                message = "$successMessage: $projectName",
-                isLoading = false
-            )
         }
     }
 
@@ -749,10 +550,124 @@ class MainViewModel(
                 sendChatMessage(quickPrompt)
             }
 
+            "/analyze_app", "/inspect_app" -> {
+                val packageName = parts.getOrNull(1)?.trim().orEmpty()
+                if (packageName.isBlank()) {
+                    pushAssistantMessage("Use: /analyze_app <package_name> or select an app from Installed Apps screen.")
+                    return
+                }
+                executeChatAction(ChatAction.InspectApp(packageName))
+            }
+
+            "/decompile_apk" -> {
+                val apkPath = parts.getOrNull(1)?.trim().orEmpty()
+                if (apkPath.isBlank()) {
+                    pushAssistantMessage("Use: /decompile_apk <path_to_apk> or select an app from Installed Apps screen.")
+                    return
+                }
+                executeChatAction(ChatAction.DecompileApk(apkPath, ""))
+            }
+
+            "/list_apps" -> {
+                executeChatAction(ChatAction.ListInstalledApps(null))
+            }
+
+            "/tool" -> {
+                val toolId = parts.getOrNull(1)?.trim().orEmpty()
+                if (toolId.isBlank()) {
+                    val tools = toolRepository.getAvailableTools()
+                    val toolsList = tools.joinToString("\n") { "• ${it.id}: ${it.name} - ${it.description}" }
+                    pushAssistantMessage("Available tools:\n$toolsList\n\nUse: /tool <tool_id> [parameters]")
+                    return
+                }
+                executeChatAction(ChatAction.ExecuteTool(toolId, emptyMap()))
+            }
+
             else -> {
                 pushAssistantMessage("Unknown command: ${parts.first()}. Run /help.")
             }
         }
+    }
+
+    /**
+     * Execute chat actions like analyzing apps, decompiling APKs, etc.
+     */
+    private fun executeChatAction(action: ChatAction) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            
+            try {
+                when (action) {
+                    is ChatAction.InspectApp -> {
+                        // This requires PackageManager from context - will be handled via callback
+                        pushAssistantMessage(
+                            "**App Analysis Requested:** ${action.packageName}\n\n" +
+                            "To analyze this app:\n" +
+                            "1. Go to Installed Apps screen\n" +
+                            "2. Find the app and tap 'Analyze in Chat'\n" +
+                            "3. Or use: /decompile_apk <apk_path>"
+                        )
+                    }
+                    
+                    is ChatAction.DecompileApk -> {
+                        val result = toolRepository.executeTool(
+                            "vibing_apk_lab_decompile",
+                            mapOf("apk_path" to action.apkPath)
+                        )
+                        result.onSuccess { output ->
+                            pushAssistantMessage("**Decompilation Result:**\n$output")
+                        }.onFailure { error ->
+                            pushAssistantMessage("Decompilation failed: ${error.message}")
+                        }
+                    }
+                    
+                    is ChatAction.ListInstalledApps -> {
+                        pushAssistantMessage(
+                            "Opening Installed Apps screen...\n" +
+                            "You can browse all installed applications and select one to analyze directly from there."
+                        )
+                    }
+                    
+                    is ChatAction.ExecuteTool -> {
+                        val result = toolRepository.executeTool(action.toolId, action.parameters)
+                        result.onSuccess { output ->
+                            pushAssistantMessage("**Tool Output:**\n$output")
+                        }.onFailure { error ->
+                            pushAssistantMessage("Tool execution failed: ${error.message}")
+                        }
+                    }
+                    
+                    else -> {
+                        pushAssistantMessage("Action not implemented yet: $action")
+                    }
+                }
+            } catch (e: Exception) {
+                pushAssistantMessage("Error executing action: ${e.message}")
+            } finally {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
+    }
+
+    /**
+     * Analyze an installed app by package name
+     */
+    fun analyzeInstalledApp(packageName: String) {
+        executeChatAction(ChatAction.InspectApp(packageName))
+    }
+
+    /**
+     * Decompile an APK file
+     */
+    fun decompileApk(apkPath: String) {
+        executeChatAction(ChatAction.DecompileApk(apkPath, ""))
+    }
+
+    /**
+     * Execute a tool command
+     */
+    fun executeToolCommand(toolId: String, parameters: Map<String, String> = emptyMap()) {
+        executeChatAction(ChatAction.ExecuteTool(toolId, parameters))
     }
 
     private fun insertSafeScriptTemplate() {
@@ -800,14 +715,6 @@ class MainViewModel(
 
     fun clearMessage() {
         _uiState.value = _uiState.value.copy(message = null)
-    }
-    
-    // G4F Authentication state
-    private val _isG4FAuthenticated = MutableStateFlow(false)
-    val isG4FAuthenticated: StateFlow<Boolean> = _isG4FAuthenticated.asStateFlow()
-    
-    fun setG4FAuthenticated(authenticated: Boolean) {
-        _isG4FAuthenticated.value = authenticated
     }
 }
 

@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.example.ide.di.DI
 import com.example.ide.ui.screen.MainScreen
 import com.example.ide.ui.theme.IdeTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize dependency injection
+        DI.init(this)
+        
         enableEdgeToEdge()
         setContent {
             IdeTheme {
