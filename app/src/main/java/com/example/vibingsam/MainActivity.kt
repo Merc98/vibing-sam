@@ -1,8 +1,13 @@
 package com.example.vibingsam
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Environment
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -13,9 +18,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
+import okhttp3.ResponseBody
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +44,29 @@ fun AppContent() {
     var showMenu by remember { mutableStateOf(true) }
     var chatMessages by remember { mutableStateOf(listOf("Checkpoint made 20 days ago", "Worked for 5 minutes", "Published your app 19 days ago")) }
     var userInput by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var modelDownloading by remember { mutableStateOf(false) }
+    var modelDownloadProgress by remember { mutableStateOf(0) }
+
+    // Permisos para almacenamiento
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            chatMessages = chatMessages + "Permiso de almacenamiento concedido."
+        } else {
+            chatMessages = chatMessages + "Permiso de almacenamiento denegado."
+        }
+    }
+
+    if (ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) != PackageManager.PERMISSION_GRANTED
+    ) {
+        storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    }
 
     if (showMenu) {
         MainMenu(
@@ -49,7 +83,33 @@ fun AppContent() {
                 showMenu = false
             },
             onConnectHuggingFace = {
-                chatMessages = chatMessages + "Conectando con Hugging Face..."
+                modelDownloading = true
+                coroutineScope.launch {
+                    try {
+                        val modelId = "google/bert-base-uncased"
+                        val fileName = "pytorch_model.bin"
+                        val response = ApiClient.service.downloadModelFile(modelId, fileName)
+                        val file = File(context.getExternalFilesDir(null), fileName)
+                        val outputStream = FileOutputStream(file)
+                        response.body()?.use { body ->
+                            val totalSize = body.contentLength()
+                            val buffer = ByteArray(1024)
+                            var bytesRead: Int
+                            var bytesDownloaded = 0L
+                            while (body.read(buffer).also { bytesRead = it } != -1) {
+                                outputStream.write(buffer, 0, bytesRead)
+                                bytesDownloaded += bytesRead
+                                modelDownloadProgress = (bytesDownloaded * 100 / totalSize).toInt()
+                            }
+                        }
+                        outputStream.close()
+                        chatMessages = chatMessages + "Modelo descargado: ${file.absolutePath}"
+                    } catch (e: Exception) {
+                        chatMessages = chatMessages + "Error al descargar el modelo: ${e.message}"
+                    } finally {
+                        modelDownloading = false
+                    }
+                }
                 showMenu = false
             }
         )
@@ -60,6 +120,15 @@ fun AppContent() {
                 userInput = ""
             }
         })
+    }
+
+    if (modelDownloading) {
+        AlertDialog(
+            onDismissRequest = { modelDownloading = false },
+            title = { Text("Descargando Modelo") },
+            text = { LinearProgressIndicator(progress = { modelDownloadProgress / 100f }) },
+            confirmButton = {}
+        )
     }
 }
 
