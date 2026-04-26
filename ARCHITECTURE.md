@@ -1,199 +1,263 @@
-# 🏗️ VibeCode Architecture
+# 🏗️ Vibing-SAM: Arquitectura IDE Inteligente
 
-## Overview
+## 📊 Visión General
 
-VibeCode follows a **Chat-Centric Architecture** where all development activities revolve around the VibeCode Chat interface. This is the core of the "Vibe Mod" concept - a unified development experience.
+Una aplicación IDE profesional tipo **Replit** que permite:
+- 💬 **Chat Multi-sesión** inteligente con IA
+- - 🎨 **Preview en tiempo real** de UI generada
+  - - 📦 **Gestión de proyectos** con monetización
+    - - 🚀 **Compilación y ejecución** en tiempo real
+      - - 💾 **APK Building** automático
+       
+        - ---
 
-## Core Components
+        ## 🏛️ Arquitectura en Capas
 
-### 1. VibeCode Chat (Central Hub)
-**Location**: `ui/screen/ChatScreen.kt` + `ui/viewmodel/MainViewModel.kt`
+        ```
+        ┌─────────────────────────────────────────┐
+        │         UI Layer (Jetpack Compose)      │
+        │  ┌──────────────────────────────────┐   │
+        │  │ • MainScreen (Layout Principal)  │   │
+        │  │ • ChatScreen (Multi-sesión)      │   │
+        │  │ • EditorScreen (Con Preview)     │   │
+        │  │ • ProjectManager (Con Monetiza)  │   │
+        │  └──────────────────────────────────┘   │
+        ├─────────────────────────────────────────┤
+        │    ViewModel & State Management         │
+        │  ┌──────────────────────────────────┐   │
+        │  │ • ChatViewModel (Historial)      │   │
+        │  │ • EditorViewModel (Código+UI)    │   │
+        │  │ • ProjectViewModel (Proyectos)   │   │
+        │  └──────────────────────────────────┘   │
+        ├─────────────────────────────────────────┤
+        │       Domain & Business Logic           │
+        │  ┌──────────────────────────────────┐   │
+        │  │ • CodeGenerator (IA → Código)    │   │
+        │  │ • UIRenderer (Código → Preview)  │   │
+        │  │ • Compiler (Build APK)           │   │
+        │  │ • Monetization (Suscripciones)   │   │
+        │  └──────────────────────────────────┘   │
+        ├─────────────────────────────────────────┤
+        │       Data Layer & Persistence          │
+        │  ┌──────────────────────────────────┐   │
+        │  │ • LocalDB (Room - Proyectos)     │   │
+        │  │ • FileSystem (Código)            │   │
+        │  │ • RemoteAPI (IA + Monetización)  │   │
+        │  └──────────────────────────────────┘   │
+        └─────────────────────────────────────────┘
+        ```
 
-The chat is not just a feature - it's the **central command center** for:
-- Code generation and modification
-- APK analysis and decompilation
-- Tool execution (vibing_apk_lab, etc.)
-- Project management commands
-- Installed app inspection
+        ---
 
-### 2. Chat Actions System
-**Location**: `domain/models.kt` - `ChatAction` sealed class
+        ## 📁 Estructura de Archivos
 
-All actions that can be triggered from chat:
-```kotlin
-sealed class ChatAction {
-    data class AnalyzeFile(val filePath: String) : ChatAction()
-    data class InspectApp(val packageName: String) : ChatAction()
-    data class DecompileApk(val apkPath: String, val outputDir: String) : ChatAction()
-    data class GenerateCode(val language: String, val description: String) : ChatAction()
-    data class ListInstalledApps(val filter: String?) : ChatAction()
-    data class ExecuteTool(val toolId: String, val parameters: Map<String, String>) : ChatAction()
-}
-```
+        ```
+        app/src/main/java/com/example/ide/
+        ├── ui/
+        │   ├── screen/
+        │   │   ├── MainScreen.kt (Layout con Sidebar expandible)
+        │   │   ├── ChatScreen.kt (Multi-sesión + Historial)
+        │   │   ├── EditorScreen.kt (Con Preview tiempo real)
+        │   │   └── ProjectManagerScreen.kt (Con Monetización)
+        │   ├── components/
+        │   │   ├── SidebarExpandible.kt (Nav + Acciones)
+        │   │   ├── ChatSessionList.kt (Historial)
+        │   │   ├── CodePreview.kt (Renderizado vivo)
+        │   │   └── MonetizationWidget.kt (Suscripciones)
+        │   └── theme/
+        │       └── Theme.kt (Material Design 3)
+        ├── viewmodel/
+        │   ├── ChatViewModel.kt (Estado chat + IA)
+        │   ├── EditorViewModel.kt (Código + generación)
+        │   └── ProjectViewModel.kt (Gestión proyectos)
+        ├── domain/
+        │   ├── usecase/
+        │   │   ├── GenerateCodeUseCase.kt
+        │   │   ├── RenderPreviewUseCase.kt
+        │   │   ├── CompileApkUseCase.kt
+        │   │   └── ManageSuscriptionUseCase.kt
+        │   └── model/
+        │       ├── ChatSession.kt
+        │       ├── CodeProject.kt
+        │       └── UserProfile.kt
+        ├── data/
+        │   ├── local/
+        │   │   ├── ProjectDatabase.kt
+        │   │   └── UserPreferences.kt
+        │   ├── remote/
+        │   │   ├── AIApiService.kt
+        │   │   └── MonetizationService.kt
+        │   └── repository/
+        │       ├── ProjectRepository.kt
+        │       └── ChatRepository.kt
+        └── di/
+            └── AppModule.kt (Inyección dependencias)
+        ```
 
-### 3. Tool Repository
-**Location**: `data/local/ToolRepository.kt`
+        ---
 
-Manages external tools like `vibing_apk_lab.py`:
-- APK inspection
-- Decompilation (jadx)
-- Decoding (apktool)
-- Package management (ADB)
+        ## 🎯 Componentes Clave
 
-Available tools:
-- `vibing_apk_lab_inspect` - APK structure analysis
-- `vibing_apk_lab_decode` - Decode resources
-- `vibing_apk_lab_decompile` - Decompile to Java
-- `vibing_apk_lab_full` - Complete analysis
-- `adb_list_packages` - List installed apps
-- `adb_package_info` - Package details
+        ### 1️⃣ **ChatScreen** (Multi-sesión)
 
-### 4. Device App Repository
-**Location**: `data/local/DeviceAppRepository.kt`
+        ```kotlin
+        // Almacena múltiples sesiones
+        data class ChatSession(
+            val id: String,
+            val title: String,
+            val messages: List<ChatMessage>,
+            val createdAt: Long,
+            val model: String // gpt-4, claude, etc
+        )
 
-Provides access to installed applications:
-- List all apps (system + user)
-- Search by name/package
-- Get APK paths
-- App metadata (version, flags, etc.)
+        // UI con tabs deslizables
+        HorizontalPager(state = pagerState) { page ->
+            ChatScreen(session = sessions[page])
+        }
+        ```
 
-### 5. AI Repository
-**Location**: `data/repository/AIRepository.kt`
+        ### 2️⃣ **EditorScreen** con **Preview en Tiempo Real**
 
-Unified interface for multiple AI providers:
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude 3)
-- Google (Gemini)
-- OpenRouter (multi-model)
-- Chinese models (Qwen, DeepSeek, Kimi)
-- Local models (offline assistance)
+        ```kotlin
+        Row(modifier = Modifier.fillMaxSize()) {
+            // Mitad izquierda: Editor de código
+            CodeEditor(
+                code = code,
+                onCodeChange = { vm.updateCode(it) }
+            )
 
-## Data Flow
+            // Mitad derecha: Preview actualizado automáticamente
+            PreviewPanel(
+                preview = vm.livePreview,  // Se actualiza cada keystroke
+                isLoading = vm.isGenerating
+            )
+        }
+        ```
 
-### Chat-Centric Workflow
+        ### 3️⃣ **Sidebar Expandible** (como IDE profesional)
 
-```
-User Input (Chat)
-      ↓
-MainViewModel.submitChatInput()
-      ↓
-┌─────────────────────────────────────┐
-│ Is Slash Command?                   │
-├──────────────┬──────────────────────┤
-│ YES          │ NO                   │
-│ ↓            │ ↓                    │
-│ handleSlash  │ sendChatMessage      │
-│ Command()    │ (to AI model)        │
-│ ↓            │                      │
-│ executeChat  │ ← AI Response        │
-│ Action()     │                      │
-└──────────────┴──────────────────────┘
-      ↓
-┌─────────────────────────────────────┐
-│ ChatAction Types:                   │
-│ • InspectApp → DeviceAppRepository  │
-│ • DecompileApk → ToolRepository     │
-│ • ExecuteTool → ToolRepository      │
-│ • ListInstalledApps → UI Navigation │
-└─────────────────────────────────────┘
-      ↓
-Result displayed in Chat
-```
+        ```
+        ┌─────┐
+        │  ☰  │ ← Botón (top-left corner)
+        └─────┘
 
-### APK Analysis Flow
+        Expandido (lado izquierdo):
+        ┌──────────────────┐
+        │ 📁 Projects      │
+        │ 💬 Chat History  │
+        │ ⚙️  Settings     │
+        │ 💰 Monetization  │
+        │ 📊 Analytics     │
+        └──────────────────┘
+        ```
 
-```
-User selects app in Installed Apps
-           ↓
-Tap "Analyze in Chat"
-           ↓
-viewModel.submitChatInput("Analyze this APK: {path}")
-           ↓
-executeChatAction(DecompileApk(apkPath))
-           ↓
-toolRepository.executeTool("vibing_apk_lab_decompile", ...)
-           ↓
-Tool executes (Python script + jadx/apktool)
-           ↓
-Output streamed back to chat
-           ↓
-User can insert suggestions into project
-```
+        ### 4️⃣ **Monetización Integrada**
 
-## Key Design Principles
+        ```kotlin
+        // En esquina superior derecha: botón de suscripción
+        Button(onClick = { showMonetizationDialog = true }) {
+            Icon(Icons.Default.CreditCard)
+            Text("Upgrade")
+        }
 
-### 1. Chat as the Single Source of Truth
-All development activities are initiated and tracked through chat. No fragmented workflows.
+        // Plans:
+        // • Free: 50 generaciones/mes
+        // • Pro: Ilimitado ($4.99/mes)
+        // • Enterprise: API ilimitada + soporte
+        ```
 
-### 2. Context Awareness
-The AI always knows:
-- Current project
-- Active file
-- Recent chat history
-- Selected tools/apps
+        ---
 
-### 3. Tool Unification
-External tools (vibing_apk_lab, ADB, etc.) are accessed through a single interface (`/tool` command).
+        ## 🔄 Flujo de Trabajo Inteligente
 
-### 4. Progressive Disclosure
-- Simple commands for common tasks (`/debug`, `/refactor`)
-- Advanced options available but not overwhelming
-- Tools revealed as needed
+        ```
+        Usuario → Chat IA
+                   ↓
+                Entiende request
+                   ↓
+              Genera código Kotlin/XML
+                   ↓
+              Renderiza Preview (tiempo real)
+                   ↓
+              Usuario ve resultado
+                   ↓
+              Puede compilar a APK
+        ```
 
-### 5. Safe Automation
-- Script templates are non-invasive
-- No automatic patching of third-party apps
-- User confirmation for destructive actions
+        ---
 
-## File Structure
+        ## 🚀 Características Avanzadas
 
-```
-app/src/main/java/com/example/ide/
-├── domain/
-│   └── models.kt              # ChatAction, ToolCommand, etc.
-├── data/
-│   ├── local/
-│   │   ├── DeviceAppRepository.kt   # Installed apps access
-│   │   └── ToolRepository.kt        # External tool execution
-│   ├── repository/
-│   │   ├── AIRepository.kt          # AI provider abstraction
-│   │   └── FileRepository.kt        # Project/file management
-│   └── api/                         # Retrofit services
-├── ui/
-│   ├── screen/
-│   │   ├── ChatScreen.kt            # Central hub
-│   │   ├── InstalledAppsScreen.kt   # App browser
-│   │   ├── ProjectsScreen.kt        # Project manager
-│   │   └── EditorScreen.kt          # Code editor
-│   └── viewmodel/
-│       └── MainViewModel.kt         # State + actions
-└── di/
-    └── ViewModelFactory.kt          # Dependency injection
-```
+        1. **Context-Aware Chat**: Entiende código actual
+        2. 2. **Live Preview**: Cambios instantáneos
+           3. 3. **Multi-session Chat**: Organiza por proyectos
+              4. 4. **Smart Compilation**: Build automático
+                 5. 5. **Revenue Stream**: Suscripciones + API
+                   
+                    6. ---
+                   
+                    7. ## 📦 Dependencias Necesarias
+                   
+                    8. ```gradle
+                       // UI
+                       implementation "androidx.compose.ui:ui:1.5.0"
+                       implementation "androidx.compose.material3:material3:1.1.0"
 
-## Extension Points
+                       // ViewModel
+                       implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.0"
+                       implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.6.0"
 
-### Adding New Tools
-1. Add tool definition in `ToolRepository.getAvailableTools()`
-2. Implement command template
-3. Add slash command in `MainViewModel.handleSlashCommand()`
-4. Handle action in `executeChatAction()`
+                       // Coroutines
+                       implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.0"
+                       implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.0"
 
-### Adding New Chat Commands
-1. Define new `ChatAction` subtype in `domain/models.kt`
-2. Add slash command handler in `handleSlashCommand()`
-3. Implement execution logic in `executeChatAction()`
+                       // Room (BD local)
+                       implementation "androidx.room:room-runtime:2.5.0"
+                       kapt "androidx.room:room-compiler:2.5.0"// Retrofit (API calls)
+                       implementation "com.squareup.retrofit2:retrofit:2.9.0"
 
-### Adding AI Models
-1. Add model type in `AIModelType` enum
-2. Implement API service in `data/api/`
-3. Add routing in `AIRepository.sendMessage()`
-4. Register in `AIRepository.getAvailableModels()`
+                       // Dependency Injection
+                       implementation "com.google.dagger:hilt-android:2.46"
+                       kapt "com.google.dagger:hilt-compiler:2.46"
+                       ```
 
-## Security Considerations
+                       ---
 
-- Command execution is sandboxed
-- APK analysis requires user confirmation
-- API keys stored locally (encryption recommended for production)
-- No code sent to external servers except AI endpoints
-- Tool paths validated before execution
+                       ## ✅ Checklist de Implementación
+
+                       - [ ] Crear MainScreen con Sidebar expandible
+                       - [ ] - [ ] Implementar ChatViewModel multi-sesión
+                       - [ ] - [ ] Crear EditorScreen con preview en vivo
+                       - [ ] - [ ] Integrar IA para generación de código
+                       - [ ] - [ ] Implementar preview de UI
+                       - [ ] - [ ] Agregar sistema de monetización
+                       - [ ] - [ ] Crear gestor de proyectos
+                       - [ ] - [ ] Build automático APK
+                       - [ ] - [ ] Sincronización en nube (opcional)
+                       - [ ] - [ ] Analytics y monetización
+                      
+                       - [ ] ---
+                       - [ ] 
+                       ## 🎨 Diseño UI Reference
+
+                       **Inspirado en:**
+                       - Replit (Chat + Editor side-by-side)
+                       - - Android Studio (Sidebar + Herramientas)
+                         - - VS Code (Preview en vivo)
+                          
+                           - **Esquema de Colores:**
+                           - - Tema oscuro por defecto (Material Dark)
+                             - - Acepto input en sidebar (expandible)
+                               - - Botón flotante para acciones rápidas
+                                
+                                 - ---
+
+                                 ## 💡 Ventajas Competitivas
+
+                                 1. **IDE móvil completo** - No necesitas PC
+                                 2. 2. **IA integrada** - Genera código automáticamente
+                                    3. 3. **Preview real** - Ve cambios al instante
+                                       4. 4. **Monetización nativa** - Ingresos desde day 1
+                                          5. 5. **APK builder** - Compila directo en phone
+                                             6. 
+                                             ¡Listo para implementar! 🚀

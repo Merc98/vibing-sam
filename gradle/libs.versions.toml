@@ -15,6 +15,10 @@ viewmodel = "2.8.7"
 navigation = "2.8.4"
 datastore = "1.1.1"
 material-icons = "1.7.6"
+apksig = "8.6.1"
+commonsCompress = "1.26.2"
+coroutines = "1.8.1"
+jadx = "1.5.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -40,9 +44,14 @@ androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle
 androidx-navigation = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 androidx-datastore = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 androidx-material-icons = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material-icons" }
+apksig = { group = "com.android.tools.build", name = "apksig", version.ref = "apksig" }
+commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commonsCompress" }
+xz = { group = "org.tukaani", name = "xz", version = "1.9" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+jadx-core = { group = "io.github.skylot", name = "jadx-core", version.ref = "jadx" }
+jadx-dex-input = { group = "io.github.skylot", name = "jadx-dex-input", version.ref = "jadx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-

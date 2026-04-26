@@ -64,7 +64,11 @@ class MainViewModel(
             ChatCommandOption("/insert_script", "Insert a safe script template into your project"),
             ChatCommandOption("/refactor", "Ask AI to refactor current file"),
             ChatCommandOption("/debug", "Ask AI to debug current file"),
-            ChatCommandOption("/test", "Ask AI to suggest tests for current file")
+            ChatCommandOption("/test", "Ask AI to suggest tests for current file"),
+            ChatCommandOption("/analyze_app", "Analyze an installed app by package name"),
+            ChatCommandOption("/decompile_apk", "Decompile an APK file"),
+            ChatCommandOption("/list_apps", "List all installed apps"),
+            ChatCommandOption("/tool", "Execute a development tool")
         )
     )
     val chatCommandOptions: StateFlow<List<ChatCommandOption>> = _chatCommandOptions.asStateFlow()
@@ -496,7 +500,11 @@ class MainViewModel(
                 • /refactor
                 • /debug
                 • /test
-                """.trimIndent()
+                • /analyze_app <package>
+                • /decompile_apk <path>
+                • /list_apps
+                • /tool <id> [parameters]
+                """
             )
 
             "/models" -> {
@@ -693,7 +701,7 @@ class MainViewModel(
 
             if __name__ == "__main__":
                 summarize_project(".")
-        """.trimIndent()
+        """
 
         saveChatCodeToProject(scriptName, scriptContent, extension)
         pushAssistantMessage("Inserted script template: $scriptName.$extension in project ${project.name}.")
