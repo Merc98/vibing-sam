@@ -6,8 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,18 +22,49 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             VibingSamTheme {
-                ChatScreen()
+                AppContent()
             }
         }
     }
 }
 
 @Composable
-fun ChatScreen() {
-    var userInput by remember { mutableStateOf("") }
+fun AppContent() {
+    var showMenu by remember { mutableStateOf(true) }
     var chatMessages by remember { mutableStateOf(listOf("Checkpoint made 20 days ago", "Worked for 5 minutes", "Published your app 19 days ago")) }
-    val coroutineScope = rememberCoroutineScope()
+    var userInput by remember { mutableStateOf("") }
 
+    if (showMenu) {
+        MainMenu(
+            onModifyAPK = {
+                chatMessages = chatMessages + "Modificando APK..."
+                showMenu = false
+            },
+            onAnalyzeWithFrida = {
+                chatMessages = chatMessages + "Analizando con Frida..."
+                showMenu = false
+            },
+            onAnalyzeWithGhidra = {
+                chatMessages = chatMessages + "Analizando con Ghidra..."
+                showMenu = false
+            },
+            onConnectHuggingFace = {
+                chatMessages = chatMessages + "Conectando con Hugging Face..."
+                showMenu = false
+            }
+        )
+    } else {
+        ChatScreen(chatMessages, userInput, onInputChange = { userInput = it }, onSend = {
+            if (userInput.isNotBlank()) {
+                chatMessages = chatMessages + "Usuario: $userInput"
+                userInput = ""
+            }
+        })
+    }
+}
+
+@Composable
+fun ChatScreen(chatMessages: List<String>, userInput: String, onInputChange: (String) -> Unit, onSend: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -63,7 +94,7 @@ fun ChatScreen() {
         ) {
             OutlinedTextField(
                 value = userInput,
-                onValueChange = { userInput = it },
+                onValueChange = onInputChange,
                 label = { Text("Escribe un comando", color = Color.White) },
                 modifier = Modifier.weight(1f),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
@@ -77,6 +108,13 @@ fun ChatScreen() {
                     unfocusedIndicatorColor = Color.Gray
                 )
             )
+
+            Button(
+                onClick = onSend,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Text("Enviar")
+            }
         }
     }
 }
