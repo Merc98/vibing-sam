@@ -3,15 +3,19 @@ package com.example.vibingsam
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.sp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,12 +31,13 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ChatScreen() {
     var userInput by remember { mutableStateOf("") }
-    var chatMessages by remember { mutableStateOf(listOf<String>()) }
+    var chatMessages by remember { mutableStateOf(listOf("Checkpoint made 20 days ago", "Worked for 5 minutes", "Published your app 19 days ago")) }
     val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Black)
             .padding(16.dp),
         verticalArrangement = Arrangement.Bottom
     ) {
@@ -44,8 +49,10 @@ fun ChatScreen() {
         ) {
             chatMessages.forEach { message ->
                 Text(
-                    text = message,
-                    modifier = Modifier.padding(4.dp)
+                    text = "• $message",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
         }
@@ -57,26 +64,19 @@ fun ChatScreen() {
             OutlinedTextField(
                 value = userInput,
                 onValueChange = { userInput = it },
-                label = { Text("Ej: 'Quiero que la app sea violeta'") },
+                label = { Text("Escribe un comando", color = Color.White) },
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White),
+                colors = TextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedContainerColor = Color.DarkGray,
+                    unfocusedContainerColor = Color.DarkGray,
+                    focusedIndicatorColor = Color.Blue,
+                    unfocusedIndicatorColor = Color.Gray
+                )
             )
-
-            Button(
-                onClick = {
-                    if (userInput.isNotBlank()) {
-                        chatMessages = chatMessages + "Usuario: $userInput"
-                        coroutineScope.launch {
-                            // Lógica para procesar el comando y modificar el APK
-                            chatMessages = chatMessages + "Sistema: Procesando comando..."
-                        }
-                        userInput = ""
-                    }
-                },
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                Text("Enviar")
-            }
         }
     }
 }
@@ -85,9 +85,9 @@ fun ChatScreen() {
 fun VibingSamTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = ColorScheme.dark(
-            primary = androidx.compose.ui.graphics.Color(0xFFBB86FC),
-            secondary = androidx.compose.ui.graphics.Color(0xFF03DAC6),
-            tertiary = androidx.compose.ui.graphics.Color(0xFF3700B3)
+            background = Color.Black,
+            primary = Color.Blue,
+            secondary = Color.Gray
         ),
         content = content
     )
