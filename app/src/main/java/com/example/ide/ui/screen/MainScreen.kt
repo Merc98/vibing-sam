@@ -41,6 +41,7 @@ fun MainScreen() {
     )
     val currentProject by viewModel.currentProject.collectAsStateWithLifecycle()
     val currentFile by viewModel.currentFile.collectAsStateWithLifecycle()
+    val isG4FAuthenticated by viewModel.isG4FAuthenticated.collectAsStateWithLifecycle()
 
     var selectedTab by remember { mutableIntStateOf(2) } // Start at AI Chat tab (index 2)
     val destinations = listOf(
@@ -55,6 +56,14 @@ fun MainScreen() {
         1 -> currentFile?.let { "${it.name}.${it.extension}" } ?: currentProject?.name
         3 -> currentProject?.name
         else -> null
+    }
+
+    // Mostrar pantalla de login si no está autenticado
+    if (!isG4FAuthenticated) {
+        LoginScreen(onLoginComplete = {
+            // Login completado, continuar con la app normal
+        })
+        return
     }
 
     Scaffold(
