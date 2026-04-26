@@ -4,15 +4,16 @@
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-blue.svg)](https://kotlinlang.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Vibing Sam es una aplicación Android que permite modificar APKs mediante un chat interactivo. Puedes enviar comandos como "Quiero que la app sea violeta" y la aplicación modificará el APK automáticamente usando herramientas como `apktool` y `jadx`.
+Vibing Sam es una aplicación Android que permite modificar APKs mediante un chat interactivo. Puedes enviar comandos como "Quiero que la app sea violeta" y la aplicación modificará el APK automáticamente usando herramientas como `apktool` y `jadx`. Además, puedes descargar modelos de IA desde Hugging Face y ejecutarlos localmente.
 
 ## 🌟 Características
 
 - **Chat Interactivo**: Envía comandos en lenguaje natural para modificar APKs.
 - **Modificación de APKs**: Cambia colores, recursos y más usando `apktool` y `jadx`.
-- **Integración con Hugging Face**: Conecta con modelos de IA para análisis avanzado.
+- **Integración con Hugging Face**: Descarga modelos de IA y ejecútalos localmente.
 - **GitHub Actions**: Construye APKs automáticamente en cada push.
 - **Análisis Estático**: Usa `jadx` para inspeccionar el código de los APKs.
+- **Sugerencia de Scripts**: Obtén scripts de `Frida` y `Ghidra` para inyección y análisis.
 
 ## 📸 Capturas de Pantalla
 
@@ -26,7 +27,7 @@ Vibing Sam es una aplicación Android que permite modificar APKs mediante un cha
 
 ### 📋 Requisitos
 - Dispositivo Android con API 24 o superior.
-- `apktool` y `jadx` instalados en tu sistema para modificar APKs.
+- Permisos de almacenamiento para descargar modelos.
 
 ### 🛠️ Instalación
 1. Clona el repositorio:
@@ -38,7 +39,7 @@ Vibing Sam es una aplicación Android que permite modificar APKs mediante un cha
 4. Compila y ejecuta en tu dispositivo o emulador.
 
 ### 🔑 Configuración
-1. Asegúrate de tener `apktool` y `jadx` instalados y disponibles en tu PATH.
+1. Asegúrate de tener permisos de almacenamiento para descargar modelos.
 2. Configura tus claves de API para Hugging Face en el archivo de configuración.
 
 ## 🎯 Uso
@@ -51,8 +52,12 @@ Vibing Sam es una aplicación Android que permite modificar APKs mediante un cha
 3. La aplicación modificará el APK y generará un archivo `modified.apk`.
 
 ### 🤖 Integración con IA
-1. Usa el chat para conectarte con modelos de Hugging Face.
-2. Envía comandos para análisis avanzado de APKs.
+1. Usa el menú para conectarte con Hugging Face.
+2. Descarga modelos de IA y ejecútalos localmente.
+
+### 🔍 Análisis Estático
+1. Usa el menú para analizar APKs con `Frida` o `Ghidra`.
+2. Obtén scripts sugeridos para inyección y análisis.
 
 ## 🏗️ Arquitectura Técnica
 
@@ -65,9 +70,10 @@ Vibing Sam es una aplicación Android que permite modificar APKs mediante un cha
 ### 📁 Estructura del Proyecto
 ```
 app/src/main/java/com/example/vibingsam/
-├── MainActivity.kt          # Chat interactivo
+├── MainActivity.kt          # Chat interactivo y lógica principal
+├── MainMenu.kt             # Menú principal
 ├── HuggingFaceApiService.kt # Integración con Hugging Face
-└── modify_apk.py            # Script para modificar APKs
+└── modify_apk.py           # Script para modificar APKs
 ```
 
 ## 📦 GitHub Actions
