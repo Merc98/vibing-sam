@@ -123,7 +123,7 @@ class ToolRepository(private val context: Context) {
      */
     suspend fun checkToolAvailability(): Map<String, Boolean> = withContext(Dispatchers.IO) {
         mapOf(
-            "python" to checkCommandExists("python3") || checkCommandExists("python"),
+            "python" to (checkCommandExists("python3") || checkCommandExists("python")),
             "adb" to checkCommandExists("adb"),
             "apktool" to checkCommandExists("apktool"),
             "jadx" to checkCommandExists("jadx"),

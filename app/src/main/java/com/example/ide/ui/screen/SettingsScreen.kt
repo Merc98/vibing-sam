@@ -360,6 +360,9 @@ private fun getProviderName(modelType: AIModelType): String {
         AIModelType.DEEPSEEK -> "DeepSeek"
         AIModelType.Z_MODEL -> "Z"
         AIModelType.KIMI -> "Moonshot AI"
+        AIModelType.G4F_FREE_MODELS -> "G4F Free"
+        AIModelType.HUGGINGFACE_MODELS -> "HuggingFace"
+        else -> "Unknown"
     }
 }
 

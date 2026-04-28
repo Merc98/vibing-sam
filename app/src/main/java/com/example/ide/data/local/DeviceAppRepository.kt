@@ -23,7 +23,7 @@ class DeviceAppRepository(
         val apps = packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
         apps.mapNotNull { pkg ->
             try {
-                val appInfo = pkg.applicationInfo
+                val appInfo = pkg.applicationInfo ?: return@mapNotNull null
                 val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                 
                 if (!includeSystemApps && isSystem) return@mapNotNull null
@@ -57,7 +57,7 @@ class DeviceAppRepository(
     suspend fun getAppByPackageName(packageName: String): InstalledApp? = withContext(Dispatchers.IO) {
         try {
             val pkg = packageManager.getPackageInfo(packageName, 0)
-            val appInfo = pkg.applicationInfo
+            val appInfo = pkg.applicationInfo ?: return@withContext null
             val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
             
             InstalledApp(

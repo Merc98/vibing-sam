@@ -36,7 +36,7 @@ fun LoginScreen(
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val viewModel: MainViewModel = viewModel(factory = ViewModelFactory(context))
+    val viewModel: MainViewModel = viewModel()
     
     var isLoading by remember { mutableStateOf(true) }
     var loginStatus by remember { mutableStateOf("Iniciando sesión automáticamente...") }
