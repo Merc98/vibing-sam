@@ -43,28 +43,9 @@ fun LoginScreen(
     var showWebView by remember { mutableStateOf(false) }
     var webViewUrl by remember { mutableStateOf("") }
     
-    // G4F.dev auto-login
+    // G4F.dev auto-login - simplified for now
     LaunchedEffect(Unit) {
-        isLoading = true
-        loginStatus = "Conectando con g4f.dev..."
-        
-        // Simular auto-login (en producción esto sería real)
-        kotlinx.coroutines.delay(1500)
-        loginStatus = "Autenticando usuario..."
-        kotlinx.coroutines.delay(1000)
-        loginStatus = "Obteniendo token de API..."
-        kotlinx.coroutines.delay(800)
-        
-        // Marcar como logueado exitosamente
         viewModel.setG4FAuthenticated(true)
-        loginStatus = "¡Autenticación completada!"
-        kotlinx.coroutines.delay(500)
-        
-        // Ahora mostrar opciones de HuggingFace
-        showWebView = false
-        isLoading = false
-        
-        // Navegar al chat principal
         onLoginComplete()
     }
     
