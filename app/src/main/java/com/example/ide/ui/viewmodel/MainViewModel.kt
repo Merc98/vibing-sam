@@ -51,6 +51,13 @@ class MainViewModel(
     private val _selectedModel = MutableStateFlow<AIModel?>(null)
     val selectedModel: StateFlow<AIModel?> = _selectedModel.asStateFlow()
 
+    private val _isG4FAuthenticated = MutableStateFlow(false)
+    val isG4FAuthenticated: StateFlow<Boolean> = _isG4FAuthenticated.asStateFlow()
+
+    fun setG4FAuthenticated(authenticated: Boolean) {
+        _isG4FAuthenticated.value = authenticated
+    }
+
     private val _apiKeys = MutableStateFlow<Map<AIModelType, String>>(emptyMap())
     val apiKeys: StateFlow<Map<AIModelType, String>> = _apiKeys.asStateFlow()
     private val _patchBundles = MutableStateFlow<List<PatchBundle>>(emptyList())
@@ -723,6 +730,54 @@ class MainViewModel(
 
     fun clearMessage() {
         _uiState.value = _uiState.value.copy(message = null)
+    }
+
+    fun generateStarterWebApp() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            try {
+                val project = Project(name = "WebApp_${System.currentTimeMillis()}")
+                val files = listOf(
+                    StarterFile("index.html", "html", """<!DOCTYPE html>
+<html>
+<head><title>My Web App</title></head>
+<body><h1>Hello World</h1></body>
+</html>"""),
+                    StarterFile("style.css", "css", """body { font-family: sans-serif; }"""),
+                    StarterFile("app.js", "js", """console.log('Hello!');""")
+                )
+                files.forEach { fileRepository.saveFile(project, CodeFile(name = file.fileName, extension = file.extension, content = file.content)) }
+                _projects.value = fileRepository.getAllProjects()
+                _currentProject.value = project
+                _uiState.value = _uiState.value.copy(isLoading = false, message = "Web App project created!")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
+            }
+        }
+    }
+
+    fun generateStarterPwaApp() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            try {
+                val project = Project(name = "PWA_${System.currentTimeMillis()}")
+                val files = listOf(
+                    StarterFile("index.html", "html", """<!DOCTYPE html>
+<html manifest="manifest.json">
+<head><title>My PWA</title></head>
+<body><h1>PWA App</h1></body>
+</html>"""),
+                    StarterFile("manifest.json", "json", """{"name":"My PWA","start_url":".","display":"standalone"}"""),
+                    StarterFile("app.js", "js", """if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');""")
+                )
+                files.forEach { fileRepository.saveFile(project, CodeFile(name = file.fileName, extension = file.extension, content = file.content)) }
+                _projects.value = fileRepository.getAllProjects()
+                _currentProject.value = project
+                _uiState.value = _uiState.value.copy(isLoading = false, message = "PWA project created!")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
+            }
+        }
     }
 }
 
