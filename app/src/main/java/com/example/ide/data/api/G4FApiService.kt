@@ -8,11 +8,12 @@ import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Headers
 
 // G4F (g4f.dev) API service - Free AI models
 interface G4FApiService {
-    @POST("api/v1/chat/completions")
     @Headers("Content-Type: application/json")
+    @POST("api/v1/chat/completions")
     suspend fun chatCompletion(
         @Body request: ChatRequest
     ): Response<ChatResponse>

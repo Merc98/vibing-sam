@@ -736,7 +736,7 @@ class MainViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val project = Project(name = "WebApp_${System.currentTimeMillis()}")
+                val projectName = "WebApp_${System.currentTimeMillis()}"
                 val files = listOf(
                     StarterFile("index.html", "html", """<!DOCTYPE html>
 <html>
@@ -746,9 +746,10 @@ class MainViewModel(
                     StarterFile("style.css", "css", """body { font-family: sans-serif; }"""),
                     StarterFile("app.js", "js", """console.log('Hello!');""")
                 )
-                files.forEach { fileRepository.saveFile(project, CodeFile(name = file.fileName, extension = file.extension, content = file.content)) }
+                files.forEach { file ->
+                    fileRepository.saveFileToProject(projectName, file.fileName, file.content, file.extension)
+                }
                 _projects.value = fileRepository.getAllProjects()
-                _currentProject.value = project
                 _uiState.value = _uiState.value.copy(isLoading = false, message = "Web App project created!")
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
@@ -760,7 +761,7 @@ class MainViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val project = Project(name = "PWA_${System.currentTimeMillis()}")
+                val projectName = "PWA_${System.currentTimeMillis()}"
                 val files = listOf(
                     StarterFile("index.html", "html", """<!DOCTYPE html>
 <html manifest="manifest.json">
@@ -770,9 +771,10 @@ class MainViewModel(
                     StarterFile("manifest.json", "json", """{"name":"My PWA","start_url":".","display":"standalone"}"""),
                     StarterFile("app.js", "js", """if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');""")
                 )
-                files.forEach { fileRepository.saveFile(project, CodeFile(name = file.fileName, extension = file.extension, content = file.content)) }
+                files.forEach { file ->
+                    fileRepository.saveFileToProject(projectName, file.fileName, file.content, file.extension)
+                }
                 _projects.value = fileRepository.getAllProjects()
-                _currentProject.value = project
                 _uiState.value = _uiState.value.copy(isLoading = false, message = "PWA project created!")
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
