@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">g4f.dev</domain>
+        <domain includeSubdomains="true">api.g4f.dev</domain>
+        <domain includeSubdomains="true">huggingface.co</domain>
+        <domain includeSubdomains="true">api.openrouter.ai</domain>
+        <domain includeSubdomains="true">api.openai.com</domain>
+        <domain includeSubdomains="true">api.anthropic.com</domain>
+    </domain-config>
+</network-security-config>
