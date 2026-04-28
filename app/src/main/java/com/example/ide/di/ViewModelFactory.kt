@@ -13,26 +13,28 @@ import com.example.ide.ui.viewmodel.MainViewModel
  * Simple dependency injection container
  */
 object DI {
-    private lateinit var context: Context
+    private var _context: android.content.Context? = null
     
-    fun init(appContext: Context) {
-        context = appContext.applicationContext
+    fun init(appContext: android.content.Context) {
+        _context = appContext.applicationContext
     }
     
+    fun getContext(): android.content.Context = _context!!
+    
     val fileRepository: FileRepository by lazy {
-        FileRepository(context)
+        FileRepository(_context!!)
     }
     
     val aiRepository: AIRepository by lazy {
         AIRepository()
     }
-    
+
     val deviceRepository: DeviceRepository by lazy {
-        DeviceRepository(context)
+        DeviceRepository(_context!!)
     }
-    
+
     val toolRepository: ToolRepository by lazy {
-        ToolRepository(context)
+        ToolRepository(_context!!)
     }
 }
 
@@ -44,7 +46,8 @@ class ViewModelFactory : ViewModelProvider.Factory {
                 MainViewModel(
                     aiRepository = DI.aiRepository,
                     fileRepository = DI.fileRepository,
-                    toolRepository = DI.toolRepository
+                    toolRepository = DI.toolRepository,
+                    appContext = null
                 ) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

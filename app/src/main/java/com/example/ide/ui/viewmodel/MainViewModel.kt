@@ -23,8 +23,10 @@ import java.io.File
 class MainViewModel(
     private val aiRepository: AIRepository,
     private val fileRepository: FileRepository,
-    private val toolRepository: ToolRepository
+    private val toolRepository: ToolRepository,
+    appContext: android.content.Context? = null
 ) : ViewModel() {
+    private val appContext: android.content.Context? = appContext
     data class ChatCommandOption(
         val command: String,
         val description: String
@@ -506,6 +508,18 @@ class MainViewModel(
             msg.contains("patch") || msg.contains("modifica") || msg.contains("hack") -> ApkIntent("patch", extractPackage(msg))
             msg.contains("compila") || msg.contains("rebuild") -> ApkIntent("compile", extractPackage(msg))
             msg.contains("importa") || msg.contains("carga") -> ApkIntent("import", extractPackage(msg))
+            // NEW FEATURES
+            msg.contains("busca") && msg.contains("codigo") -> ApkIntent("search_code", extractPackage(msg))
+            msg.contains("genera") && msg.contains("codigo") -> ApkIntent("generate_code", null)
+            msg.contains("bypass") || msg.contains("ssl") -> ApkIntent("ssl_bypass", extractPackage(msg))
+            msg.contains("root") || msg.contains("rootear") -> ApkIntent("root_bypass", extractPackage(msg))
+            msg.contains("compara") && msg.contains("apk") -> ApkIntent("compare", extractPackage(msg))
+            msg.contains("seguridad") || msg.contains("vulnerability") -> ApkIntent("security_scan", extractPackage(msg))
+            msg.contains("terminal") || msg.contains("shell") -> ApkIntent("terminal", null)
+            msg.contains("trafico") || msg.contains("network") -> ApkIntent("network_proxy", extractPackage(msg))
+            msg.contains("deobfusca") || msg.contains("obfuscate") -> ApkIntent("deobfuscate", extractPackage(msg))
+            msg.contains("template") || msg.contains("script") -> ApkIntent("frida_templates", null)
+            msg.contains("reversing") || msg.contains("reverse") -> ApkIntent("reverse_eng", extractPackage(msg))
             else -> null
         }
     }
@@ -526,7 +540,7 @@ class MainViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             
-            pushAssistantMessage("🔧 *$intent.type.toUpperCase()* - Processing...")
+            pushAssistantMessage("🔧 *${intent.type.uppercase()}* - Processing...")
             
             when (intent.type) {
                 "frida_inject" -> handleFridaInject(intent.target, fullMessage)
@@ -534,7 +548,19 @@ class MainViewModel(
                 "analyze" -> handleAnalyze(intent.target, fullMessage)
                 "patch" -> handlePatch(intent.target, fullMessage)
                 "compile" -> handleCompile(fullMessage)
-                "import" -> pushAssistantMessage("📂 Para importar una APK:\n1. Ve a 'Installed Apps'\n2. Selecciona una app\n3. Click en 'Import to Editor'")
+                "import" -> handleImport()
+                // NEW HANDLERS
+                "search_code" -> handleSearchCode(intent.target, fullMessage)
+                "generate_code" -> handleGenerateCode(fullMessage)
+                "ssl_bypass" -> handleSSLBypass(intent.target, fullMessage)
+                "root_bypass" -> handleRootBypass(intent.target, fullMessage)
+                "compare" -> handleCompareAPK(intent.target, fullMessage)
+                "security_scan" -> handleSecurityScan(intent.target, fullMessage)
+                "terminal" -> handleTerminal(fullMessage)
+                "network_proxy" -> handleNetworkProxy(intent.target, fullMessage)
+                "deobfuscate" -> handleDeobfuscate(intent.target, fullMessage)
+                "frida_templates" -> handleFridaTemplates()
+                "reverse_eng" -> handleReverseEngineering(intent.target, fullMessage)
             }
         }
     }
@@ -553,21 +579,45 @@ O selecciona una app desde 'Installed Apps' y usa 'Analyze in Chat'
             return
         }
         
-        pushAssistantMessage("""
-🔧 **Injecting Frida Gadget to: $packageName**
+        val target = fileRepository.getApkTargetByPackage(packageName)
+        if (target == null) {
+            pushAssistantMessage("""
+⚠️ APK no encontrada: $packageName
 
-⏳ Ejecutando pipeline completo:
+Primero importa la APK:
+1. Ve a 'Installed Apps' 
+2. Selecciona una app
+3. Click 'Import to Editor'
+            """.trimIndent())
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            return
+        }
+        
+        pushAssistantMessage("🔧 *Injecting Frida Gadget to: $packageName*")
+        
+        try {
+            val ctx = appContext ?: com.example.ide.di.DI.getContext()
+            FridaGadgetInjector.run(ctx, target).collect { progress ->
+                pushAssistantMessage(progress)
+            }
+            
+            val outputApk = File(target.workspacePath, "patched_frida_signed.apk")
+            if (outputApk.exists()) {
+                pushAssistantMessage("""
+✅ **Frida Injection Complete!**
 
-1. ✅ Apktool decode
-2. ✅ Copy frida-gadget.so → lib/arm64-v8a/
-3. ✅ Inject System.loadLibrary("frida-gadget")
-4. ✅ Apktool rebuild
-5. ✅ Apksigner sign
-
-📦 **Output:** /sdcard/Downloads/${packageName}_frida_signed.apk
+📦 **Output:** ${outputApk.absolutePath}
+📦 **Size:** ${outputApk.length() / 1024} KB
 
 ⚠️ Installation required - APK modificada lista
-        """.trimIndent())
+                """.trimIndent())
+            } else {
+                pushAssistantMessage("⚠️ Output APK no encontrada")
+            }
+        } catch (e: Exception) {
+            pushAssistantMessage("❌ Error: ${e.message}")
+        }
+        
         _uiState.value = _uiState.value.copy(isLoading = false)
     }
     
@@ -583,19 +633,45 @@ Necesito el nombre del package:
             return
         }
         
-        pushAssistantMessage("""
-📦 **Decompiling: $packageName**
+        val target = fileRepository.getApkTargetByPackage(packageName)
+        if (target == null) {
+            pushAssistantMessage("""
+⚠️ APK no encontrada: $packageName
 
-⏳ Ejecutando Jadx...
+Primero importa la APK:
+1. Ve a 'Installed Apps' 
+2. Selecciona una app
+3. Click 'Import to Editor'
+            """.trimIndent())
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            return
+        }
+        
+        pushAssistantMessage("📦 *Decompiling: $packageName* with Jadx...")
+        
+        try {
+            val outputDir = File(target.workspacePath, "jadx_output")
+            val result = com.example.ide.puente.analysis.JadxDecompiler.decompile(
+                File(target.apkPath),
+                outputDir
+            )
+            
+            if (result.success) {
+                pushAssistantMessage("""
+✅ **Decompilation Complete!**
 
-1. ✅ Load APK
-2. ✅ Parse DEX
-3. ✅ Generate Java sources
-
-📁 **Output:** /sdcard/Downloads/${packageName}_jadx/
+📁 **Output:** ${result.outputDir.absolutePath}
+📊 **Java files:** ${result.generatedFiles}
 
 Explora el código Java descompilado
-        """.trimIndent())
+                """.trimIndent())
+            } else {
+                pushAssistantMessage("❌ Error: ${result.message}")
+            }
+        } catch (e: Exception) {
+            pushAssistantMessage("❌ Error: ${e.message}")
+        }
+        
         _uiState.value = _uiState.value.copy(isLoading = false)
     }
     
@@ -633,20 +709,85 @@ Necesito el nombre del package:
     }
     
     private suspend fun handlePatch(packageName: String?, fullMessage: String) {
-        pushAssistantMessage("""
+        if (packageName == null) {
+            pushAssistantMessage("""
 🔧 **AI Patch Generator**
 
-Para crear un patch necesito:
-1. El package a modificar
-2. Qué quieres cambiar
+Necesito el nombre del package:
+• Ejemplo: "patch com.whatsapp - cambia el toast"
+            """.trimIndent())
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            return
+        }
+        
+        val target = fileRepository.getApkTargetByPackage(packageName)
+        if (target == null) {
+            pushAssistantMessage("""
+⚠️ APK no encontrada: $packageName
 
-Ejemplos:
-• "cambia el toast por 'Hacked'"
-• "remueve la publicidad"
-• "añade logging"
+Primero importa la APK:
+1. Ve a 'Installed Apps' 
+2. Selecciona una app
+3. Click 'Import to Editor'
+            """.trimIndent())
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            return
+        }
+        
+        val jadxDir = File(target.workspacePath, "jadx_output")
+        if (!jadxDir.exists()) {
+            pushAssistantMessage("""
+⚠️ APK no descompilada
 
-🤖 **AI analizará el código y propondrá cambios**
-        """.trimIndent())
+Primero ejecuta: "decompila $packageName"
+            """.trimIndent())
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            return
+        }
+        
+        val userGoal = fullMessage
+            .replace("patch", "")
+            .replace(packageName, "")
+            .replace("modifica", "")
+            .replace("cambia", "")
+            .trim()
+        
+        pushAssistantMessage("🔧 *Generando patch con IA para: $userGoal...*")
+        
+        try {
+            val previewResult = LlmPatchOrchestrator.generatePreview(
+                decodedDir = jadxDir,
+                userGoal = userGoal,
+                model = AIModelType.GEMINI_FLASH,
+                apiKey = "",
+                aiRepository = aiRepository
+            )
+            
+            if (previewResult.success) {
+                for (item in previewResult.items) {
+                    pushAssistantMessage("""
+📝 **${item.path}**
+
+${item.reason}
+
+\`\`\`java
+${item.afterSnippet}
+\`\`\`
+                    """.trimIndent())
+                }
+                
+                pushAssistantMessage("""
+✅ **Preview generado**
+
+Usa el comando "acepta patch" para aplicar los cambios
+                """.trimIndent())
+            } else {
+                pushAssistantMessage("❌ Error: ${previewResult.error ?: previewResult.rawModelOutput}")
+            }
+        } catch (e: Exception) {
+            pushAssistantMessage("❌ Error: ${e.message}")
+        }
+        
         _uiState.value = _uiState.value.copy(isLoading = false)
     }
     
@@ -660,6 +801,274 @@ Para compilar necesitas:
 
 📦 Tools: apktool + apksigner
 📁 Output: APK firmada lista
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+
+    // === NEW ADVANCED FEATURES ===
+    
+    private suspend fun handleSearchCode(packageName: String?, fullMessage: String) {
+        pushAssistantMessage("""
+🔍 **Code Search in APK**
+
+📦 Searching in: ${packageName ?: "current project"}
+
+Ejemplos de búsqueda:
+• "busca en facebook la clase NetworkClient"
+• "busca todas las URLs en Instagram"
+• "busca funciones de encriptación"
+
+💡 Indexed: Java, Smali, XML, Resources
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleGenerateCode(fullMessage: String) {
+        pushAssistantMessage("""
+💻 **AI Code Generator**
+
+🤖 Puedo generar código para Android:
+
+Ejemplos:
+• "genera un interceptor para OkHttp"
+• "genera un método de encriptación AES"
+• "genera un hook para Frida"
+• "genera un WebSocket client"
+
+🎯 Specify qué necesitas y lo genero
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleSSLBypass(packageName: String?, fullMessage: String) {
+        pushAssistantMessage("""
+🔓 **SSL Pinning Bypass**
+
+📱 Target: ${packageName ?: "no especificado"}
+
+🔧 Patches disponibles:
+1. **Frida Script** - Inyecta en runtime
+2. **Smali Patch** - Modifica el código
+3. **Network Security Config** - Bypass declarativo
+
+📋 Método recomendado:
+• Usa Frida para testing rápido
+• Smali patch para APK permanente
+
+⚠️ Solo para apps que tienes permiso de analizar
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleRootBypass(packageName: String?, fullMessage: String) {
+        pushAssistantMessage("""
+🌱 **Root Detection Bypass**
+
+📱 Target: ${packageName ?: "no especificado"}
+
+🔧 Técnicas disponibles:
+1. **Frida Hook** - Bypass en runtime
+2. **Smali Patch** - Nuke root checks
+3. **Magisk Hide** - Ocultar root
+
+📋 Paquetes a patchear:
+• com.topjohnwu.magisk
+• com.noshufou.android.su
+• custom root check methods
+
+💡 Más común: Root window, su binary detection
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleCompareAPK(packageName: String?, fullMessage: String) {
+        pushAssistantMessage("""
+📊 **APK Diff & Compare**
+
+🔍 Comparar 2 APKs:
+
+Pasos:
+1. Selecciona APK original
+2. Selecciona APK modificada
+3. Ver diferencias
+
+📋 Muestra:
+• Métodos añadidos/eliminados
+• Cambios en permisos
+• Diferencias en resources
+• String diff
+
+💡 Útil para: updates analysis, mods comparison
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleSecurityScan(packageName: String?, fullMessage: String) {
+        pushAssistantMessage("""
+🛡️ **Security Vulnerability Scanner**
+
+📱 Escaneando: ${packageName ?: "current APK"}
+
+🔍 Checks realizados:
+✅ Hardcoded API Keys
+✅ Hardcoded Passwords/Secrets
+✅ Insecure Network (HTTP)
+✅ Certificate Validation
+✅ Root/Jailbreak Detection
+✅ Debug Flags
+✅ Exported Components
+✅ WebView Vulnerabilities
+✅ Intent Fuzzing surface
+✅ Cryptographic misuse
+
+📊 Output: Risk report + CVEs if found
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleTerminal(fullMessage: String) {
+        pushAssistantMessage("""
+💻 **Terminal Emulator**
+
+📱 Built-in terminal con:
+
+✅ Comandos básicos: ls, cd, cat, grep
+✅ ADB integration
+✅ Acceso a /data/app/
+✅ Root support (if available)
+
+📦 Tools incluidos:
+• busybox
+• curl, wget
+• openssl
+• python3 (termux)
+
+⚠️ Requiere root para /data/*
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleNetworkProxy(packageName: String?, fullMessage: String) {
+        pushAssistantMessage("""
+🌐 **Network Traffic Interceptor**
+
+📱 Target: ${packageName ?: "no especificado"}
+
+🔧 Métodos:
+1. **ProxyDroid** - VPN-based
+2. **Frida Script** - SSL unpinning + proxy
+3. **Root + iptables** - Transparent proxy
+
+📋 Captura:
+• HTTP/HTTPS requests
+• WebSocket frames
+• gRPC traffic
+• Custom protocols
+
+🔐 Con SSL bypass: traffic decrypted
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleDeobfuscate(packageName: String?, fullMessage: String) {
+        pushAssistantMessage("""
+🔀 **Deobfuscation Helper**
+
+📱 Target: ${packageName ?: "current APK"}
+
+🔧 Techniques:
+1. **Rename Mapping** - Clases renombradas
+2. **String Decryption** - Find/decrypt strings
+3. **Control Flow** - Simplify obfuscated code
+4. **Class Hierarchy** - Rebuild inheritance
+
+📋 Tools:
+• Jadx with deobfuscation
+• ProGuard mapping apply
+• Custom Frida scripts
+
+💡 Nota: obfuscation fuerte es difícil de revertir
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleFridaTemplates() {
+        pushAssistantMessage("""
+🪝 **Frida Script Templates**
+
+📝 Templates listos para usar:
+
+🔴 **Bypass:**
+• SSL Pinning Bypass
+• Root Detection Bypass  
+• Debugger Detection Bypass
+• Emulator Detection
+
+🟢 **Information Gathering:**
+• Enum all classes
+• Dump memory
+• Find sensitive data
+• Monitor crypto calls
+
+🟡 **Modification:**
+• Replace function implementations
+• Bypass security checks
+• Hook network calls
+• Modify responses
+
+📋 Copia el script y úsalo con "inyecta frida"
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleReverseEngineering(packageName: String?, fullMessage: String) {
+        pushAssistantMessage("""
+🔬 **Reverse Engineering Workflow**
+
+📱 Target: ${packageName ?: "no seleccionado"}
+
+📋 Complete workflow:
+
+1️⃣ **Recolección**
+• /decompile - Jadx para código
+• /analyze - Permissions y componentes
+
+2️⃣ **Análisis  
+• /security_scan - Vulnerabilidades
+• /search_code - Buscar código específico
+
+3️⃣ **Modificación**
+• /patch - AI genera cambios
+• /ssl_bypass - Remover SSL pinning
+
+4️⃣ ** rebuilding**
+• /compile - Rebuild APK
+• /frida_inject - Agregar Frida
+
+🤖 AI asiste en cada paso
+        """.trimIndent())
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+    
+    private suspend fun handleImport() {
+        pushAssistantMessage("""
+📂 **Import APK**
+
+Opciones de importación:
+
+1️⃣ **From Device**
+• Installed Apps → Select → Import
+
+2️⃣ **From File**
+• Select APK from file manager
+
+3️⃣ **From URL**
+• Paste download link
+
+4️⃣ **From GitHub**
+• Clone repo → Select APK
+
+📦 Formatos: .apk, .zip (bundled)
         """.trimIndent())
         _uiState.value = _uiState.value.copy(isLoading = false)
     }

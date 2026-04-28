@@ -13,6 +13,7 @@ import java.io.File
 import java.io.FileWriter
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import com.example.ide.puente.data.ApkTarget
 
 data class PatchBundle(
     val fileName: String,
@@ -38,6 +39,7 @@ class FileRepository(
     // Fallback to internal filesDir when external storage is unavailable.
     private val projectsDir = resolveWritableRoot("IDEProjects")
     private val patchBundlesDir = resolveWritableRoot("IDEPatches")
+    private val apkTargetsFile = File(context.filesDir, "apk_targets.json")
     
 
     private fun resolveWritableRoot(folderName: String): File {
@@ -557,12 +559,62 @@ body {
                 "APKTool" to "Útil para cambios de AndroidManifest, recursos (res/) y smali."
             looksLikeJadx ->
                 "JADX" to "Útil para lectura de código Java/Kotlin decompilado."
-            else ->
+else ->
                 "General ZIP" to "Bundle genérico: revisa README/patch-info para su uso."
         }
     }
 
-
+    // ============== APK Targets Management ==============
+    
+    fun saveApkTarget(target: ApkTarget) {
+        val targets = getAllApkTargets().toMutableList()
+        val existingIndex = targets.indexOfFirst { it.id == target.id }
+        
+        if (existingIndex >= 0) {
+            targets[existingIndex] = target
+        } else {
+            targets.add(target)
+        }
+        
+        saveApkTargets(targets)
+    }
+    
+    fun getAllApkTargets(): List<ApkTarget> {
+        return if (apkTargetsFile.exists()) {
+            try {
+                val json = apkTargetsFile.readText()
+                val type = object : TypeToken<List<ApkTarget>>() {}.type
+                gson.fromJson(json, type) ?: emptyList()
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+    }
+    
+    fun getApkTargetByPackage(packageName: String): ApkTarget? {
+        return getAllApkTargets().find { it.packageName == packageName }
+    }
+    
+    fun getApkTargetById(id: String): ApkTarget? {
+        return getAllApkTargets().find { it.id == id }
+    }
+    
+    fun deleteApkTarget(targetId: String) {
+        val targets = getAllApkTargets().toMutableList()
+        targets.removeAll { it.id == targetId }
+        saveApkTargets(targets)
+    }
+    
+    private fun saveApkTargets(targets: List<ApkTarget>) {
+        try {
+            val json = gson.toJson(targets)
+            apkTargetsFile.writeText(json)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save APK targets", e)
+        }
+    }
 
     companion object {
         private const val TAG = "FileRepository"
