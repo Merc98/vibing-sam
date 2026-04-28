@@ -3,7 +3,10 @@ package com.example.ide.ui.screen
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Inventory
@@ -27,6 +30,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ide.ui.viewmodel.MainViewModel
+import com.example.ide.puente.ui.frida.FridaScreen
+import com.example.ide.ui.screen.GitHubScreen
+import com.example.ide.ui.screen.ApkToolsScreen
 
 private data class AppDestination(
     val label: String,
@@ -49,6 +55,9 @@ fun MainScreen() {
         AppDestination("Editor") { Icon(Icons.Default.Edit, contentDescription = "Editor") },
         AppDestination("VibeCode Chat") { Icon(Icons.Default.Chat, contentDescription = "VibeCode Chat") },
         AppDestination("Installed Apps") { Icon(Icons.Default.Inventory, contentDescription = "Installed Apps") },
+        AppDestination("Frida") { Icon(Icons.Default.BugReport, contentDescription = "Frida") },
+        AppDestination("GitHub") { Icon(Icons.Default.Code, contentDescription = "GitHub") },
+        AppDestination("APK Tools") { Icon(Icons.Default.Build, contentDescription = "APK Tools") },
         AppDestination("Settings") { Icon(Icons.Default.Settings, contentDescription = "Settings") }
     )
 
@@ -111,7 +120,10 @@ fun MainScreen() {
                 1 -> EditorScreen(viewModel)
                 2 -> ChatScreen(viewModel)
                 3 -> InstalledAppsScreen(viewModel)
-                4 -> SettingsScreen(viewModel)
+                4 -> FridaScreen(viewModel)  // Frida tab
+                5 -> GitHubScreen(viewModel)  // GitHub tab  
+                6 -> ApkToolsScreen(viewModel)  // APK Tools tab
+                7 -> SettingsScreen(viewModel)
             }
         }
     }
