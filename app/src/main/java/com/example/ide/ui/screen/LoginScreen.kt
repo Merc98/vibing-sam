@@ -88,8 +88,8 @@ fun LoginScreen(
                 color = Color(0xFF00E5A1) // Verde Replit
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.Icon(
-                        androidx.compose.material.icons.filled.SmartToy,
+                    Icon(
+                        Icons.Filled.SmartToy,
                         contentDescription = null,
                         tint = Color(0xFF0D1117),
                         modifier = Modifier.size(64.dp)
@@ -140,8 +140,8 @@ fun LoginScreen(
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        androidx.compose.material3.Icon(
-                            androidx.compose.material.icons.filled.CheckCircle,
+                        Icon(
+                            Icons.Filled.CheckCircle,
                             contentDescription = null,
                             tint = Color(0xFF00E5A1),
                             modifier = Modifier.size(48.dp)
@@ -200,19 +200,19 @@ fun LoginScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     FeatureItem(
-                        icon = androidx.compose.material.icons.filled.AutoAwesome,
+                        icon = Icons.Filled.AutoAwesome,
                         title = "G4F Free Models",
                         description = "IA gratuita con autenticación automática"
                     )
                     
                     FeatureItem(
-                        icon = androidx.compose.material.icons.filled.Download,
+                        icon = Icons.Filled.Download,
                         title = "HuggingFace",
                         description = "Descarga modelos y ejecuta localmente"
                     )
                     
                     FeatureItem(
-                        icon = androidx.compose.material.icons.filled.Code,
+                        icon = Icons.Filled.Code,
                         title = "Totalmente Offline",
                         description = "Funciona sin conexión después de descargar"
                     )
@@ -232,7 +232,7 @@ private fun FeatureItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        androidx.compose.material3.Icon(
+        Icon(
             imageVector = icon,
             contentDescription = null,
             tint = Color(0xFF00E5A1),
