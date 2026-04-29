@@ -7,24 +7,25 @@ import com.example.ide.data.local.DeviceRepository
 import com.example.ide.data.local.ToolRepository
 import com.example.ide.data.repository.AIRepository
 import com.example.ide.data.repository.FileRepository
+import com.example.ide.domain.apk.ApkContextOrchestrator
+import com.example.ide.domain.apk.ApkImportService
+import com.example.ide.domain.apk.ApkTransformationOrchestrator
+import com.example.ide.domain.apk.PatchApplier
 import com.example.ide.ui.viewmodel.MainViewModel
 
-/**
- * Simple dependency injection container
- */
 object DI {
-    private var _context: android.content.Context? = null
-    
-    fun init(appContext: android.content.Context) {
+    private var _context: Context? = null
+
+    fun init(appContext: Context) {
         _context = appContext.applicationContext
     }
-    
-    fun getContext(): android.content.Context = _context!!
-    
+
+    fun getContext(): Context = _context!!
+
     val fileRepository: FileRepository by lazy {
         FileRepository(_context!!)
     }
-    
+
     val aiRepository: AIRepository by lazy {
         AIRepository()
     }
@@ -35,6 +36,23 @@ object DI {
 
     val toolRepository: ToolRepository by lazy {
         ToolRepository(_context!!)
+    }
+
+    val apkImportService: ApkImportService by lazy {
+        ApkImportService(_context!!, deviceRepository, fileRepository)
+    }
+
+    val apkContextOrchestrator: ApkContextOrchestrator by lazy {
+        ApkContextOrchestrator(_context!!, fileRepository)
+    }
+
+    val apkTransformationOrchestrator: ApkTransformationOrchestrator by lazy {
+        ApkTransformationOrchestrator(
+            context = _context!!,
+            contextOrchestrator = apkContextOrchestrator,
+            patchApplier = PatchApplier(),
+            aiRepository = aiRepository
+        )
     }
 }
 
@@ -47,7 +65,9 @@ class ViewModelFactory : ViewModelProvider.Factory {
                     aiRepository = DI.aiRepository,
                     fileRepository = DI.fileRepository,
                     toolRepository = DI.toolRepository,
-                    appContext = null
+                    appContext = DI.getContext(),
+                    apkImportService = DI.apkImportService,
+                    apkTransformationOrchestrator = DI.apkTransformationOrchestrator
                 ) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
