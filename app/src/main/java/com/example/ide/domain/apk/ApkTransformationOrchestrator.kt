@@ -45,13 +45,10 @@ class ApkTransformationOrchestrator(
                 return ApkTransformationResult(false, build.message, preview = preview)
             }
 
-            val exported = exporter.exportUnsigned(workspace.outputApkPath)
-            if (!exported.success) {
-                return ApkTransformationResult(false, exported.message, workspace.outputApkPath, preview)
-            }
+            val exported = exporter.signAndExport(workspace.outputApkPath)
 
             ApkTransformationResult(
-                success = true,
+                success = exported.success,
                 message = exported.message,
                 outputApkPath = exported.path ?: workspace.outputApkPath,
                 preview = preview
