@@ -1,21 +1,30 @@
 package com.example.ide.domain.apk
 
+import android.content.Context
 import com.example.ide.data.repository.AIRepository
+import com.example.ide.puente.exec.ApktoolRunner
 
 class ApkTransformationOrchestrator(
+    private val context: Context,
     private val contextOrchestrator: ApkContextOrchestrator,
     private val patchApplier: PatchApplier,
     private val aiRepository: AIRepository
 ) {
 
     private val planner = LlmTransformationPlanner(aiRepository)
+    private val validator = ApkPlanValidator()
 
     suspend fun execute(request: ApkTransformationRequest): ApkTransformationResult {
         return try {
             val workspace = contextOrchestrator.prepareWorkspace(request.source)
-            val context = contextOrchestrator.buildContext(workspace)
+            val contextData = contextOrchestrator.buildContext(workspace)
 
-            val plan = planner.plan(request, context)
+            val plan = planner.plan(request, contextData)
+
+            val validation = validator.validate(workspace, plan)
+            if (!validation.valid) {
+                return ApkTransformationResult(false, validation.message)
+            }
 
             val preview = PatchPreview(
                 summary = plan.summary,
@@ -30,13 +39,18 @@ class ApkTransformationOrchestrator(
 
             patchApplier.apply(workspace, plan)
 
-            com.example.ide.puente.exec.ApktoolRunner.build(workspace.decodedDir, workspace.outputApkPath)
+            val buildResult = ApktoolRunner.run(
+                context,
+                listOf("b", workspace.decodedDir, "-o", workspace.outputApkPath)
+            )
 
-            val signed = ApkSigner.sign(workspace.outputApkPath, workspace.outputApkPath)
+            if (buildResult.exitCode != 0) {
+                return ApkTransformationResult(false, "Build failed: ${buildResult.stderr}")
+            }
 
             return ApkTransformationResult(
-                success = signed,
-                message = if (signed) "APK transformed and signed" else "Build ok but signing failed",
+                success = true,
+                message = "APK transformed (unsigned)",
                 outputApkPath = workspace.outputApkPath,
                 preview = preview
             )
