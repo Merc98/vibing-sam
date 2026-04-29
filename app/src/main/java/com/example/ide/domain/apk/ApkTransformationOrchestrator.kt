@@ -8,12 +8,14 @@ class ApkTransformationOrchestrator(
     private val aiRepository: AIRepository
 ) {
 
+    private val planner = LlmTransformationPlanner(aiRepository)
+
     suspend fun execute(request: ApkTransformationRequest): ApkTransformationResult {
         return try {
             val workspace = contextOrchestrator.prepareWorkspace(request.source)
             val context = contextOrchestrator.buildContext(workspace)
 
-            val plan = generatePlan(request, context)
+            val plan = planner.plan(request, context)
 
             val preview = PatchPreview(
                 summary = plan.summary,
@@ -30,50 +32,16 @@ class ApkTransformationOrchestrator(
 
             com.example.ide.puente.exec.ApktoolRunner.build(workspace.decodedDir, workspace.outputApkPath)
 
-            return ApkTransformationResult(true, "APK transformed", workspace.outputApkPath, preview)
+            val signed = ApkSigner.sign(workspace.outputApkPath, workspace.outputApkPath)
+
+            return ApkTransformationResult(
+                success = signed,
+                message = if (signed) "APK transformed and signed" else "Build ok but signing failed",
+                outputApkPath = workspace.outputApkPath,
+                preview = preview
+            )
         } catch (e: Exception) {
             ApkTransformationResult(false, e.message ?: "error")
         }
-    }
-
-    private suspend fun generatePlan(request: ApkTransformationRequest, context: ApkContext): ApkTransformationPlan {
-        val prompt = """
-You are an APK transformation planner.
-Return ONLY JSON.
-
-User goal: ${request.userGoal}
-
-Manifest:
-${context.manifestSnippet}
-
-Files:
-${context.resourceTree.take(20)}
-        """.trimIndent()
-
-        val response = aiRepository.sendMessage(request.model, request.apiKey, listOf(
-            com.example.ide.data.model.ChatMessage("user", prompt)
-        ))
-
-        val text = response.getOrNull() ?: return fallbackPlan(request)
-
-        return parsePlan(text) ?: fallbackPlan(request)
-    }
-
-    private fun fallbackPlan(request: ApkTransformationRequest): ApkTransformationPlan {
-        return ApkTransformationPlan(
-            summary = "Fallback simple replace",
-            targetFiles = listOf("res/values/colors.xml"),
-            operations = listOf(
-                PatchOperation.ReplaceText(
-                    path = "res/values/colors.xml",
-                    before = "#FFFFFF",
-                    after = "#0000FF"
-                )
-            )
-        )
-    }
-
-    private fun parsePlan(text: String): ApkTransformationPlan? {
-        return null // TODO JSON parser real
     }
 }
