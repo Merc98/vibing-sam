@@ -8,25 +8,56 @@ import com.example.ide.data.repository.AIRepository
 import com.example.ide.data.repository.FileRepository
 import com.example.ide.data.repository.PatchBundle
 import com.example.ide.data.local.ToolRepository
+import com.example.ide.data.ai.LocalModelManager
+import com.example.ide.domain.apk.ApkImportService
+import com.example.ide.domain.apk.ApkTransformationOrchestrator
+import com.example.ide.domain.apk.ApkSource
+import com.example.ide.domain.apk.ApkTransformationRequest
+import com.example.ide.domain.frida.FridaService
 import com.example.ide.domain.ChatAction
 import com.example.ide.puente.analysis.LlmPatchOrchestrator
 import com.example.ide.puente.analysis.JadxDecompiler
 import com.example.ide.puente.frida.FridaGadgetInjector
 import com.example.ide.puente.exec.ApktoolRunner
 import com.example.ide.puente.data.ApkTarget
+import com.example.ide.domain.terminal.SandboxTerminal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
+
+data class VibingModToolCard(
+    val type: String,
+    val title: String,
+    val body: String,
+    val metadata: Map<String, String> = emptyMap(),
+    val actionLabel: String? = null,
+    val actionCommand: String? = null
+)
+
+data class VibingApkTransformationResult(
+    val targetPackage: String? = null,
+    val outputPath: String? = null,
+    val signed: Boolean = false,
+    val message: String
+)
+
 class MainViewModel(
     private val aiRepository: AIRepository,
     private val fileRepository: FileRepository,
     private val toolRepository: ToolRepository,
-    appContext: android.content.Context? = null
+    appContext: android.content.Context? = null,
+    private val apkImportService: ApkImportService? = null,
+    private val apkTransformationOrchestrator: ApkTransformationOrchestrator? = null
 ) : ViewModel() {
     private val appContext: android.content.Context? = appContext
+    private val sandboxTerminal: SandboxTerminal? = appContext?.let { SandboxTerminal(File(it.filesDir, "workspace").apply { mkdirs() }) }
+    private val localModelManager: LocalModelManager? = appContext?.let { LocalModelManager(it) }
+    private val fridaService: FridaService = FridaService(toolRepository)
+    private var pendingVibingSource: ApkSource? = null
+    private var pendingVibingGoal: String = "Apply safe UI/resource improvements"
     data class ChatCommandOption(
         val command: String,
         val description: String
@@ -52,6 +83,12 @@ class MainViewModel(
 
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
+    private val _vibingToolCards = MutableStateFlow<List<VibingModToolCard>>(emptyList())
+    val vibingToolCards: StateFlow<List<VibingModToolCard>> = _vibingToolCards.asStateFlow()
+    private val _terminalLines = MutableStateFlow<List<String>>(emptyList())
+    val terminalLines: StateFlow<List<String>> = _terminalLines.asStateFlow()
+    private val _lastApkTransformationResult = MutableStateFlow<VibingApkTransformationResult?>(null)
+    val lastApkTransformationResult: StateFlow<VibingApkTransformationResult?> = _lastApkTransformationResult.asStateFlow()
 
     private val _availableModels = MutableStateFlow<List<AIModel>>(emptyList())
     val availableModels: StateFlow<List<AIModel>> = _availableModels.asStateFlow()
@@ -1373,6 +1410,173 @@ Opciones de importación:
             }
         }
     }
+
+    fun submitVibingModMessage(message: String) {
+        val normalized = message.trim().lowercase()
+        when {
+            normalized.startsWith("import apk") -> {
+                val target = message.substringAfter("import apk", "").trim()
+                if (target.endsWith(".apk", ignoreCase = true)) {
+                    startVibingModFromApkFile(target, pendingVibingGoal)
+                } else if (target.isNotBlank()) {
+                    startVibingModFromInstalledPackage(target, pendingVibingGoal)
+                } else {
+                    _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "ImportCard", "Usage: import apk <packageName|/path/file.apk>")
+                }
+            }
+            normalized.startsWith("analyze") || normalized.startsWith("preview patch") -> {
+                val goal = message.substringAfter("analyze", missingDelimiterValue = "").ifBlank { pendingVibingGoal }.trim()
+                pendingVibingGoal = goal.ifBlank { pendingVibingGoal }
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("analysis", "AnalysisCard", "Analysis ready. Goal: $pendingVibingGoal")
+            }
+            normalized == "apply" -> approvePendingPatch()
+            normalized == "rebuild" -> rebuildCurrentApkTarget()
+            normalized == "export" -> executeVibingPipeline()
+            normalized.startsWith("run terminal") -> runTerminalCommand(message.removePrefix("run terminal").trim())
+            normalized.startsWith("run frida") -> {
+                val payload = message.removePrefix("run frida").trim()
+                val packageName = payload.substringBefore("::", "").trim()
+                val script = payload.substringAfter("::", "").trim()
+                runFrida(packageName, script)
+            }
+            normalized.contains("local model status") -> publishLocalModelStatus()
+            else -> submitChatInput(message)
+        }
+    }
+
+    fun startVibingModFromInstalledPackage(packageName: String, goal: String) {
+        pendingVibingSource = ApkSource.InstalledPackage(packageName)
+        pendingVibingGoal = goal
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("package" to packageName))
+    }
+
+    fun startVibingModFromApkFile(path: String, goal: String) {
+        pendingVibingSource = ApkSource.ApkFile(path)
+        pendingVibingGoal = goal
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("path" to path))
+    }
+
+    fun approvePendingPatch() {
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("patch_preview", "Patch Preview", "Apply MOD approved")
+        executeVibingPipeline()
+    }
+
+    fun rejectPendingPatch() {
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("patch_preview", "Patch Preview", "Usuario rechazó patch")
+    }
+
+    fun runTerminalCommand(command: String) {
+        val terminal = sandboxTerminal ?: return
+        val result = terminal.run(command)
+        if (result.output == "__CLEAR__") {
+            _terminalLines.value = emptyList()
+        } else {
+            _terminalLines.value = _terminalLines.value + "$ ${command.trim()}" + result.output
+        }
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
+            type = "terminal",
+            title = "TerminalOutputCard",
+            body = result.output,
+            metadata = mapOf("cwd" to result.cwd)
+        )
+    }
+
+    fun rebuildCurrentApkTarget() {
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("build", "BuildCard", "Rebuild MOD APK started...")
+        executeVibingPipeline()
+    }
+
+    fun runFrida(packageName: String, script: String) {
+        viewModelScope.launch {
+            if (packageName.isBlank()) {
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("frida", "FridaCard", "Usage: run frida <package.name> :: <script>")
+                return@launch
+            }
+            val attach = fridaService.attach(packageName)
+            val run = fridaService.runScript(script)
+            _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
+                type = "frida",
+                title = "Frida",
+                body = "$attach
+$run"
+            )
+        }
+    }
+
+    private fun publishLocalModelStatus() {
+        val manager = localModelManager ?: return
+        val model = manager.recommendedModels().firstOrNull() ?: return
+        val status = manager.status(model.id)
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
+            type = "local_model",
+            title = "Local Model",
+            body = "${status.model?.displayName}: ${status.message}",
+            metadata = mapOf(
+                "downloaded" to status.downloaded.toString(),
+                "configured" to status.configured.toString(),
+                "runtime" to if (status.inferenceRuntimeReady) "available" else "unavailable"
+            )
+        )
+    }
+
+    private fun executeVibingPipeline() {
+        val orchestrator = apkTransformationOrchestrator ?: return
+        val source = pendingVibingSource ?: run {
+            _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("error", "Error", "No APK selected. Use: import apk <package|path.apk>")
+            return
+        }
+        val model = _selectedModel.value?.type ?: AIModelType.LOCAL_QUICK_HELP
+        val key = _apiKeys.value[model].orEmpty()
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            val result = orchestrator.execute(
+                ApkTransformationRequest(
+                    source = source,
+                    userGoal = pendingVibingGoal,
+                    model = model,
+                    apiKey = key
+                )
+            )
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
+                type = "build",
+                title = "BuildCard",
+                body = result.message,
+                metadata = mapOf("success" to result.success.toString())
+            )
+            result.preview?.let { preview ->
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
+                    type = "patch_preview",
+                    title = "Patch Preview",
+                    body = preview.summary,
+                    metadata = mapOf(
+                        "riskLevel" to preview.riskLevel.name,
+                        "operations" to preview.operationsCount.toString(),
+                        "files" to preview.files.joinToString(", ")
+                    ),
+                    actionLabel = "Apply MOD",
+                    actionCommand = "apply"
+                )
+            }
+            if (result.outputApkPath != null) {
+                _lastApkTransformationResult.value = VibingApkTransformationResult(
+                    outputPath = result.outputApkPath,
+                    signed = result.success,
+                    message = result.message
+                )
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
+                    type = "export",
+                    title = "Export MOD APK",
+                    body = result.message,
+                    metadata = mapOf(
+                        "path" to result.outputApkPath,
+                        "signed" to result.success.toString()
+                    )
+                )
+            }
+        }
+    }
+
 }
 
 data class MainUiState(

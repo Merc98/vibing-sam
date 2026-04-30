@@ -81,6 +81,18 @@ data class PatchPreview(
     val operationsCount: Int
 )
 
+data class PatchOperationResult(
+    val operation: String,
+    val path: String,
+    val success: Boolean,
+    val message: String
+)
+
+data class PatchApplyResult(
+    val success: Boolean,
+    val results: List<PatchOperationResult>
+)
+
 data class ApkTransformationResult(
     val success: Boolean,
     val message: String,
