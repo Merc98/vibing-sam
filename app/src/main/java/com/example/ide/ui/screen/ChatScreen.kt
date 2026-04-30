@@ -1,298 +1,105 @@
 package com.example.ide.ui.screen
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ide.data.model.ChatMessage
 import com.example.ide.ui.viewmodel.MainViewModel
+import com.example.ide.ui.viewmodel.VibingModToolCard
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(viewModel: MainViewModel) {
+fun ChatScreen(
+    viewModel: MainViewModel,
+    modifier: Modifier = Modifier
+) {
     val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
+    val cards by viewModel.vibingToolCards.collectAsStateWithLifecycle()
     val selectedModel by viewModel.selectedModel.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val currentFile by viewModel.currentFile.collectAsStateWithLifecycle()
-    val commandOptions by viewModel.chatCommandOptions.collectAsStateWithLifecycle()
-    
     var messageText by remember { mutableStateOf("") }
+
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(chatMessages.size) {
-        if (chatMessages.isNotEmpty()) {
-            coroutineScope.launch {
-                listState.animateScrollToItem(chatMessages.size - 1)
-            }
+    LaunchedEffect(chatMessages.size, cards.size, uiState.isLoading, uiState.error) {
+        val total = chatMessages.size + cards.size
+        if (total > 0) {
+            coroutineScope.launch { listState.animateScrollToItem(total - 1) }
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Header with model info and current file
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
+    Column(modifier = modifier.fillMaxSize()) {
+        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "VibeCode AI",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = selectedModel?.name ?: "No model selected",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    
-                    IconButton(onClick = { viewModel.clearChat() }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Clear Chat")
-                    }
-                }
-                
-                currentFile?.let { file ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Description,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Working on: ${file.name} (${file.language})",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
+                Text("Vibing MOD Chat", fontWeight = FontWeight.Bold)
+                Text(selectedModel?.name ?: "No model")
             }
         }
 
-        // Chat messages
         LazyColumn(
             state = listState,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 8.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (chatMessages.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Chat,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.outline
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                "Start a conversation",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                "Ask questions about your code or get help with programming",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-            
-            items(chatMessages) { message ->
-                ChatMessageItem(message = message, viewModel = viewModel)
-            }
-            
+            items(chatMessages) { ChatMessageItem(it) }
+            items(cards) { card -> VibingCardRenderer(card, viewModel) }
             if (uiState.isLoading) {
-                item {
-                    ChatMessageItem(
-                        message = ChatMessage(
-                            role = "assistant",
-                            content = "Thinking...",
-                            timestamp = System.currentTimeMillis()
-                        ),
-                        isLoading = true,
-                        viewModel = viewModel
-                    )
-                }
+                item { OutlinedCard { Text("Working...", modifier = Modifier.padding(12.dp)) } }
+            }
+            uiState.error?.let { err ->
+                item { OutlinedCard { Text("Error: $err", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(12.dp)) } }
             }
         }
 
-        // Input area
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                uiState.error?.let { error ->
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Error,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = error,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = { viewModel.clearError() }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Dismiss",
-                                    tint = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                        }
+        Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = messageText,
+                    onValueChange = { messageText = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Send a Vibing MOD command...") }
+                )
+                IconButton(onClick = {
+                    if (messageText.isNotBlank()) {
+                        viewModel.submitVibingModMessage(messageText)
+                        messageText = ""
                     }
-                }
-                
-                val filteredCommands = remember(messageText, commandOptions) {
-                    if (!messageText.startsWith("/")) {
-                        emptyList()
-                    } else {
-                        val query = messageText.trim().lowercase()
-                        commandOptions.filter {
-                            query == "/" || it.command.startsWith(query)
-                        }.take(5)
-                    }
-                }
-
-                if (filteredCommands.isNotEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        filteredCommands.forEach { cmd ->
-                            AssistChip(
-                                onClick = { messageText = "${cmd.command} " },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                ),
-                                label = {
-                                    Text("${cmd.command} • ${cmd.description}")
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Row(
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    OutlinedTextField(
-                        value = messageText,
-                        onValueChange = { messageText = it },
-                        placeholder = { Text("Type a message or '/' for quick actions...") },
-                        modifier = Modifier.weight(1f),
-                        maxLines = 4,
-                        enabled = !uiState.isLoading,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                        )
-                    )
-                    
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    FloatingActionButton(
-                        onClick = {
-                            if (messageText.isNotBlank()) {
-                                viewModel.submitChatInput(messageText.trim())
-                                messageText = ""
-                            }
-                        },
-                        modifier = Modifier.size(48.dp),
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(Icons.Default.Send, contentDescription = "Send")
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("/refactor", "/debug", "/test", "/insert_script").forEach { action ->
-                        SuggestionChip(
-                            onClick = { messageText = action },
-                            label = { Text(action) },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        )
-                    }
+                }) {
+                    Icon(Icons.Default.Send, contentDescription = "Send")
                 }
             }
         }
@@ -300,225 +107,93 @@ fun ChatScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun ChatMessageItem(
-    message: ChatMessage,
-    isLoading: Boolean = false,
-    viewModel: MainViewModel? = null
-) {
-    val isUser = message.role == "user"
-    
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
-    ) {
-        if (!isUser) {
-            Icon(
-                Icons.Default.SmartToy,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(32.dp)
-                    .padding(top = 4.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = if (isUser) 
-                    MaterialTheme.colorScheme.primary 
-                else 
-                    MaterialTheme.colorScheme.surfaceVariant
-            ),
-            modifier = Modifier.widthIn(max = 280.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isUser) "You" else "AI",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isUser) 
-                            MaterialTheme.colorScheme.onPrimary 
-                        else 
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    
-                    if (!isLoading) {
-                        Text(
-                            text = SimpleDateFormat("HH:mm", Locale.getDefault())
-                                .format(Date(message.timestamp)),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isUser) 
-                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                            else 
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                if (isLoading) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = message.content,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    // Check if the message contains code
-                    val codeBlocks = extractCodeBlocks(message.content)
-                    
-                    if (codeBlocks.isNotEmpty() && viewModel != null) {
-                        // Display message with code blocks and save buttons
-                        Column {
-                            // Display the non-code part of the message
-                            val nonCodeContent = message.content.replace(Regex("```[\\s\\S]*?```"), "").trim()
-                            if (nonCodeContent.isNotEmpty()) {
-                                Text(
-                                    text = nonCodeContent,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isUser) 
-                                        MaterialTheme.colorScheme.onPrimary 
-                                    else 
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
-                            
-                            // Display code blocks with save buttons
-                            codeBlocks.forEachIndexed { index, codeBlock ->
-                                val (language, code) = codeBlock
-                                Card(
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                ) {
-                                    Column(modifier = Modifier.padding(8.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = language.ifEmpty { "Code" },
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                            
-                                            IconButton(
-                                                onClick = {
-                                                    // Generate a default file name based on language
-                                                    val extension = when (language.lowercase()) {
-                                                        "html" -> "html"
-                                                        "css" -> "css"
-                                                        "javascript", "js" -> "js"
-                                                        "typescript", "ts" -> "ts"
-                                                        "python", "py" -> "py"
-                                                        "java" -> "java"
-                                                        "kotlin", "kt" -> "kt"
-                                                        "cpp", "c++" -> "cpp"
-                                                        "c" -> "c"
-                                                        "csharp", "c#" -> "cs"
-                                                        "php" -> "php"
-                                                        "ruby", "rb" -> "rb"
-                                                        "go" -> "go"
-                                                        "rust", "rs" -> "rs"
-                                                        "swift" -> "swift"
-                                                        "sql" -> "sql"
-                                                        "json" -> "json"
-                                                        "xml" -> "xml"
-                                                        "yaml", "yml" -> "yaml"
-                                                        "markdown", "md" -> "md"
-                                                        else -> if (language.isNotEmpty()) language else "txt"
-                                                    }
-                                                    
-                                                    val fileName = "code_snippet_${System.currentTimeMillis()}"
-                                                    viewModel.saveChatCodeToProject(fileName, code, extension)
-                                                }
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Save,
-                                                    contentDescription = "Save to Project",
-                                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                                )
-                                            }
-                                        }
-                                        
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        
-                                        Text(
-                                            text = code,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(8.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // Display regular message without code blocks
-                        Text(
-                            text = message.content,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isUser) 
-                                MaterialTheme.colorScheme.onPrimary 
-                            else 
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-        
-        if (isUser) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(32.dp)
-                    .padding(top = 4.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+private fun VibingCardRenderer(card: VibingModToolCard, viewModel: MainViewModel) {
+    when (card.type) {
+        "import" -> ImportCard(card)
+        "analysis" -> AnalysisCard(card)
+        "patch_preview" -> PatchPreviewCard(
+            card = card,
+            onApply = { viewModel.approvePendingPatch() },
+            onReject = { viewModel.rejectPendingPatch() }
+        )
+        "build" -> BuildCard(card)
+        "export" -> ExportCard(card)
+        "terminal" -> TerminalOutputCard(card)
+        "local_model" -> LocalModelCard(card)
+        else -> OutlinedCard { Text("${card.title}: ${card.body}", modifier = Modifier.padding(12.dp)) }
+    }
+}
+
+@Composable
+fun ImportCard(card: VibingModToolCard) = OutlinedCard {
+    Column(Modifier.padding(12.dp)) {
+        Text("MOD Workspace", fontWeight = FontWeight.SemiBold)
+        Text(card.metadata["package"] ?: card.metadata["path"] ?: card.body)
+    }
+}
+
+@Composable
+fun AnalysisCard(card: VibingModToolCard) = OutlinedCard {
+    Column(Modifier.padding(12.dp)) {
+        Text("Analysis", fontWeight = FontWeight.SemiBold)
+        Text(card.body)
+    }
+}
+
+@Composable
+fun PatchPreviewCard(card: VibingModToolCard, onApply: () -> Unit, onReject: () -> Unit) = OutlinedCard {
+    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Patch Preview", fontWeight = FontWeight.SemiBold)
+        Text(card.body)
+        Text("Risk: ${card.metadata["riskLevel"] ?: "UNKNOWN"}")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onApply) { Text("Apply MOD") }
+            Button(onClick = onReject) { Text("Reject") }
         }
     }
 }
 
-/**
- * Extract code blocks from message content
- * Returns a list of pairs: (language, code)
- */
-fun extractCodeBlocks(content: String): List<Pair<String, String>> {
-    val codeBlocks = mutableListOf<Pair<String, String>>()
-    val regex = Regex("```(\\w*)\\s*([\\s\\S]*?)```")
-    val matches = regex.findAll(content)
-    
-    for (match in matches) {
-        val language = match.groupValues[1]
-        val code = match.groupValues[2].trim()
-        codeBlocks.add(language to code)
+@Composable
+fun BuildCard(card: VibingModToolCard) = OutlinedCard {
+    Column(Modifier.padding(12.dp)) {
+        Text("Rebuild MOD APK", fontWeight = FontWeight.SemiBold)
+        Text(card.body, fontFamily = FontFamily.Monospace)
     }
-    
-    return codeBlocks
+}
+
+@Composable
+fun ExportCard(card: VibingModToolCard) = OutlinedCard {
+    Column(Modifier.padding(12.dp)) {
+        Text("Export MOD APK", fontWeight = FontWeight.SemiBold)
+        Text("Signed: ${card.metadata["signed"] ?: "false"}")
+        Text("Path: ${card.metadata["path"] ?: "n/a"}")
+        card.metadata["error"]?.takeIf { it.isNotBlank() }?.let { Text("Error: $it") }
+    }
+}
+
+@Composable
+fun TerminalOutputCard(card: VibingModToolCard) = OutlinedCard {
+    Column(Modifier.padding(12.dp)) {
+        Text("Terminal", fontWeight = FontWeight.SemiBold)
+        Text("cwd: ${card.metadata["cwd"] ?: "."}")
+        Text(card.body, fontFamily = FontFamily.Monospace)
+    }
+}
+
+@Composable
+fun LocalModelCard(card: VibingModToolCard) = OutlinedCard {
+    Column(Modifier.padding(12.dp)) {
+        Text("Local Model", fontWeight = FontWeight.SemiBold)
+        Text(card.body)
+    }
+}
+
+@Composable
+fun ChatMessageItem(message: ChatMessage) {
+    Card {
+        Column(Modifier.padding(12.dp)) {
+            Text(message.role, fontWeight = FontWeight.Bold)
+            Text(message.content)
+        }
+    }
 }
