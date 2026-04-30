@@ -20,6 +20,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
+
+data class VibingModToolCard(
+    val title: String,
+    val body: String,
+    val actionLabel: String? = null,
+    val actionCommand: String? = null
+)
+
+data class VibingApkTransformationResult(
+    val targetPackage: String? = null,
+    val outputPath: String? = null,
+    val signed: Boolean = false,
+    val message: String
+)
+
 class MainViewModel(
     private val aiRepository: AIRepository,
     private val fileRepository: FileRepository,
@@ -52,6 +67,12 @@ class MainViewModel(
 
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
+    private val _vibingToolCards = MutableStateFlow<List<VibingModToolCard>>(emptyList())
+    val vibingToolCards: StateFlow<List<VibingModToolCard>> = _vibingToolCards.asStateFlow()
+    private val _terminalLines = MutableStateFlow<List<String>>(emptyList())
+    val terminalLines: StateFlow<List<String>> = _terminalLines.asStateFlow()
+    private val _lastApkTransformationResult = MutableStateFlow<VibingApkTransformationResult?>(null)
+    val lastApkTransformationResult: StateFlow<VibingApkTransformationResult?> = _lastApkTransformationResult.asStateFlow()
 
     private val _availableModels = MutableStateFlow<List<AIModel>>(emptyList())
     val availableModels: StateFlow<List<AIModel>> = _availableModels.asStateFlow()
@@ -1373,6 +1394,51 @@ Opciones de importación:
             }
         }
     }
+
+    fun submitVibingModMessage(message: String) {
+        submitChatInput(message)
+    }
+
+    fun startVibingModFromInstalledPackage(packageName: String, goal: String) {
+        pushAssistantMessage("📦 Vibing MOD Chat • Import card\nPaquete seleccionado: $packageName")
+        submitChatInput("analiza $packageName. Objetivo: $goal")
+    }
+
+    fun startVibingModFromApkFile(path: String, goal: String) {
+        pushAssistantMessage("📦 Vibing MOD Chat • Import card\nAPK seleccionada: $path")
+        submitChatInput("decompila $path. Objetivo: $goal")
+    }
+
+    fun approvePendingPatch() {
+        pushAssistantMessage("✅ Apply MOD: aprobado por usuario")
+        submitChatInput("apply patch pendiente")
+    }
+
+    fun rejectPendingPatch() {
+        pushAssistantMessage("🛑 Patch Preview rechazado por usuario")
+    }
+
+    fun runTerminalCommand(command: String) {
+        val cmd = command.trim()
+        if (cmd.isBlank()) return
+        val allowed = setOf("pwd", "ls", "cd", "cat", "mkdir", "rm")
+        val first = cmd.substringBefore(" ")
+        if (first !in allowed || cmd.contains("..") || cmd.contains("../") || cmd.startsWith("/")) {
+            val blocked = "Blocked terminal command: $cmd"
+            _terminalLines.value = _terminalLines.value + blocked
+            pushAssistantMessage("🧱 Terminal card\n$blocked")
+            return
+        }
+        val line = "$ $cmd"
+        _terminalLines.value = _terminalLines.value + line
+        pushAssistantMessage("🧰 Terminal card\n$line")
+    }
+
+    fun rebuildCurrentApkTarget() {
+        pushAssistantMessage("🏗️ Build card\nRebuild MOD APK en progreso...")
+        submitChatInput("rebuild mod apk")
+    }
+
 }
 
 data class MainUiState(
