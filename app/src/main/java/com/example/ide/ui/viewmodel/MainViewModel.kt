@@ -14,11 +14,29 @@ import com.example.ide.puente.analysis.JadxDecompiler
 import com.example.ide.puente.frida.FridaGadgetInjector
 import com.example.ide.puente.exec.ApktoolRunner
 import com.example.ide.puente.data.ApkTarget
+import com.example.ide.domain.terminal.SandboxTerminal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
+
+
+data class VibingModToolCard(
+    val type: String,
+    val title: String,
+    val body: String,
+    val metadata: Map<String, String> = emptyMap(),
+    val actionLabel: String? = null,
+    val actionCommand: String? = null
+)
+
+data class VibingApkTransformationResult(
+    val targetPackage: String? = null,
+    val outputPath: String? = null,
+    val signed: Boolean = false,
+    val message: String
+)
 
 class MainViewModel(
     private val aiRepository: AIRepository,
@@ -27,6 +45,7 @@ class MainViewModel(
     appContext: android.content.Context? = null
 ) : ViewModel() {
     private val appContext: android.content.Context? = appContext
+    private val sandboxTerminal: SandboxTerminal? = appContext?.let { SandboxTerminal(File(it.filesDir, "workspace").apply { mkdirs() }) }
     data class ChatCommandOption(
         val command: String,
         val description: String
@@ -52,6 +71,12 @@ class MainViewModel(
 
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
+    private val _vibingToolCards = MutableStateFlow<List<VibingModToolCard>>(emptyList())
+    val vibingToolCards: StateFlow<List<VibingModToolCard>> = _vibingToolCards.asStateFlow()
+    private val _terminalLines = MutableStateFlow<List<String>>(emptyList())
+    val terminalLines: StateFlow<List<String>> = _terminalLines.asStateFlow()
+    private val _lastApkTransformationResult = MutableStateFlow<VibingApkTransformationResult?>(null)
+    val lastApkTransformationResult: StateFlow<VibingApkTransformationResult?> = _lastApkTransformationResult.asStateFlow()
 
     private val _availableModels = MutableStateFlow<List<AIModel>>(emptyList())
     val availableModels: StateFlow<List<AIModel>> = _availableModels.asStateFlow()
@@ -1373,6 +1398,51 @@ Opciones de importación:
             }
         }
     }
+
+    fun submitVibingModMessage(message: String) {
+        submitChatInput(message)
+    }
+
+    fun startVibingModFromInstalledPackage(packageName: String, goal: String) {
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("package" to packageName))
+        submitChatInput("analiza $packageName. Objetivo: $goal")
+    }
+
+    fun startVibingModFromApkFile(path: String, goal: String) {
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("path" to path))
+        submitChatInput("decompila $path. Objetivo: $goal")
+    }
+
+    fun approvePendingPatch() {
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("patch_preview", "Patch Preview", "Usuario aprobó Apply MOD")
+        submitChatInput("apply patch pendiente")
+    }
+
+    fun rejectPendingPatch() {
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("patch_preview", "Patch Preview", "Usuario rechazó patch")
+    }
+
+    fun runTerminalCommand(command: String) {
+        val terminal = sandboxTerminal ?: return
+        val result = terminal.run(command)
+        if (result.output == "__CLEAR__") {
+            _terminalLines.value = emptyList()
+        } else {
+            _terminalLines.value = _terminalLines.value + "$ ${command.trim()}" + result.output
+        }
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
+            type = "terminal",
+            title = "TerminalOutputCard",
+            body = result.output,
+            metadata = mapOf("cwd" to result.cwd)
+        )
+    }
+
+    fun rebuildCurrentApkTarget() {
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("build", "Build card", "Rebuild MOD APK en progreso...")
+        submitChatInput("rebuild mod apk")
+    }
+
 }
 
 data class MainUiState(
