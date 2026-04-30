@@ -18,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,6 +69,15 @@ fun ChatScreen(
                 Text("Vibing MOD Chat", fontWeight = FontWeight.Bold)
                 Text(selectedModel?.name ?: "No model")
             }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            TextButton(onClick = { viewModel.submitVibingModMessage("preview patch") }) { Text("Patch Preview") }
+            TextButton(onClick = { viewModel.submitVibingModMessage("rebuild") }) { Text("Rebuild MOD APK") }
+            TextButton(onClick = { viewModel.submitVibingModMessage("export") }) { Text("Export MOD APK") }
+            TextButton(onClick = { viewModel.clearChat() }) { Text("Clear") }
         }
 
         LazyColumn(
@@ -138,6 +148,7 @@ fun AnalysisCard(card: VibingModToolCard) = OutlinedCard {
     Column(Modifier.padding(12.dp)) {
         Text("Analysis", fontWeight = FontWeight.SemiBold)
         Text(card.body)
+        card.metadata.forEach { (k, v) -> Text("$k: $v", style = MaterialTheme.typography.bodySmall) }
     }
 }
 
@@ -147,6 +158,8 @@ fun PatchPreviewCard(card: VibingModToolCard, onApply: () -> Unit, onReject: () 
         Text("Patch Preview", fontWeight = FontWeight.SemiBold)
         Text(card.body)
         Text("Risk: ${card.metadata["riskLevel"] ?: "UNKNOWN"}")
+        card.metadata["files"]?.takeIf { it.isNotBlank() }?.let { Text("Files: $it", style = MaterialTheme.typography.bodySmall) }
+        card.metadata["operations"]?.let { Text("Operations: $it", style = MaterialTheme.typography.bodySmall) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onApply) { Text("Apply MOD") }
             Button(onClick = onReject) { Text("Reject") }
@@ -159,6 +172,7 @@ fun BuildCard(card: VibingModToolCard) = OutlinedCard {
     Column(Modifier.padding(12.dp)) {
         Text("Rebuild MOD APK", fontWeight = FontWeight.SemiBold)
         Text(card.body, fontFamily = FontFamily.Monospace)
+        card.metadata.forEach { (k, v) -> Text("$k: $v", style = MaterialTheme.typography.bodySmall) }
     }
 }
 
@@ -186,6 +200,9 @@ fun LocalModelCard(card: VibingModToolCard) = OutlinedCard {
     Column(Modifier.padding(12.dp)) {
         Text("Local Model", fontWeight = FontWeight.SemiBold)
         Text(card.body)
+        Text("downloaded: ${card.metadata["downloaded"] ?: "false"}")
+        Text("configured: ${card.metadata["configured"] ?: "false"}")
+        Text("runtime: ${card.metadata["runtime"] ?: "unavailable"}")
     }
 }
 

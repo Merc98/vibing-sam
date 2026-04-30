@@ -1351,6 +1351,8 @@ Opciones de importación:
 
     fun clearChat() {
         _chatMessages.value = emptyList()
+        _vibingToolCards.value = emptyList()
+        _terminalLines.value = emptyList()
     }
 
     fun clearError() {
@@ -1445,15 +1447,29 @@ Opciones de importación:
     }
 
     fun startVibingModFromInstalledPackage(packageName: String, goal: String) {
-        pendingVibingSource = ApkSource.InstalledPackage(packageName)
-        pendingVibingGoal = goal
-        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("package" to packageName))
+        viewModelScope.launch {
+            try {
+                apkImportService?.importInstalledPackage(packageName)
+                pendingVibingSource = ApkSource.InstalledPackage(packageName)
+                pendingVibingGoal = goal
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("package" to packageName))
+            } catch (e: Exception) {
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("error", "Import error", e.message ?: "Could not import installed package")
+            }
+        }
     }
 
     fun startVibingModFromApkFile(path: String, goal: String) {
-        pendingVibingSource = ApkSource.ApkFile(path)
-        pendingVibingGoal = goal
-        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("path" to path))
+        viewModelScope.launch {
+            try {
+                apkImportService?.importApkFile(path)
+                pendingVibingSource = ApkSource.ApkFile(path)
+                pendingVibingGoal = goal
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("path" to path))
+            } catch (e: Exception) {
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("error", "Import error", e.message ?: "Could not import APK file")
+            }
+        }
     }
 
     fun approvePendingPatch() {
