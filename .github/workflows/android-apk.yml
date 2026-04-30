@@ -37,12 +37,18 @@ jobs:
 
       - name: Install required SDK packages
         run: |
-          sdkmanager "platforms;android-36" \
-                 "build-tools;36.0.0" \
-                 "platform-tools"
+          sdkmanager "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
+
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Validate Gradle project
+        run: ./gradlew --no-daemon help --stacktrace
 
       - name: Build debug APK
         if: ${{ github.event.inputs.build_type == 'debug' }}
@@ -52,11 +58,15 @@ jobs:
         if: ${{ github.event.inputs.build_type == 'release' }}
         run: ./gradlew --no-daemon assembleRelease --stacktrace
 
+      - name: List APK outputs
+        if: always()
+        run: find app/build/outputs/apk -type f -name "*.apk" -print || true
+
       - name: Upload debug APK
         if: ${{ github.event.inputs.build_type == 'debug' }}
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: vibing-sam-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
@@ -64,6 +74,6 @@ jobs:
         if: ${{ github.event.inputs.build_type == 'release' }}
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
+          name: vibing-sam-release-apk-unsigned-or-default
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
