@@ -11,12 +11,6 @@ on:
         options:
           - debug
           - release
-  push:
-    branches:
-      - main
-      - master
-      - replit-version
-  pull_request:
 
 jobs:
   build-apk:
@@ -50,16 +44,16 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build debug APK (default for push/PR)
-        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'debug' }}
+      - name: Build debug APK
+        if: ${{ github.event.inputs.build_type == 'debug' }}
         run: ./gradlew --no-daemon assembleDebug --stacktrace
 
-      - name: Build release APK (manual)
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
+      - name: Build release APK
+        if: ${{ github.event.inputs.build_type == 'release' }}
         run: ./gradlew --no-daemon assembleRelease --stacktrace
 
       - name: Upload debug APK
-        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'debug' }}
+        if: ${{ github.event.inputs.build_type == 'debug' }}
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
@@ -67,7 +61,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload release APK
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
+        if: ${{ github.event.inputs.build_type == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
