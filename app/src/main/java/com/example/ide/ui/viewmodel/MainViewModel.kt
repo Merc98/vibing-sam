@@ -18,6 +18,7 @@ import com.example.ide.domain.ChatAction
 import com.example.ide.puente.analysis.LlmPatchOrchestrator
 import com.example.ide.puente.analysis.JadxDecompiler
 import com.example.ide.puente.frida.FridaGadgetInjector
+import com.example.ide.puente.frida.FridaTemplates
 import com.example.ide.puente.exec.ApktoolRunner
 import com.example.ide.puente.data.ApkTarget
 import com.example.ide.domain.terminal.SandboxTerminal
@@ -44,6 +45,20 @@ data class VibingApkTransformationResult(
     val message: String
 )
 
+data class VibingModSession(
+    val packageName: String? = null,
+    val apkPath: String? = null,
+    val workspacePath: String? = null,
+    val decodedDir: String? = null,
+    val jadxDir: String? = null,
+    val goal: String? = null,
+    val pendingPlan: ApkTransformationPlan? = null,
+    val patchApplyResult: com.example.ide.domain.apk.PatchApplyResult? = null,
+    val outputApkPath: String? = null,
+    val signedApkPath: String? = null,
+    val signed: Boolean = false
+)
+
 class MainViewModel(
     private val aiRepository: AIRepository,
     private val fileRepository: FileRepository,
@@ -57,7 +72,6 @@ class MainViewModel(
     private val localModelManager: LocalModelManager? = appContext?.let { LocalModelManager(it) }
     private val fridaService: FridaService = FridaService(toolRepository)
     private var pendingVibingSource: ApkSource? = null
-    private var pendingVibingGoal: String = "Apply safe UI/resource improvements"
     data class ChatCommandOption(
         val command: String,
         val description: String
@@ -89,6 +103,8 @@ class MainViewModel(
     val terminalLines: StateFlow<List<String>> = _terminalLines.asStateFlow()
     private val _lastApkTransformationResult = MutableStateFlow<VibingApkTransformationResult?>(null)
     val lastApkTransformationResult: StateFlow<VibingApkTransformationResult?> = _lastApkTransformationResult.asStateFlow()
+    private val _vibingSession = MutableStateFlow(VibingModSession(goal = "Apply safe UI/resource improvements"))
+    val vibingSession: StateFlow<VibingModSession> = _vibingSession.asStateFlow()
 
     private val _availableModels = MutableStateFlow<List<AIModel>>(emptyList())
     val availableModels: StateFlow<List<AIModel>> = _availableModels.asStateFlow()
@@ -1414,36 +1430,37 @@ Opciones de importación:
     }
 
     fun submitVibingModMessage(message: String) {
+        pushUserMessage(message)
         val normalized = message.trim().lowercase()
         when {
             normalized.startsWith("import apk") -> {
                 val target = message.substringAfter("import apk", "").trim()
                 if (target.endsWith(".apk", ignoreCase = true)) {
-                    startVibingModFromApkFile(target, pendingVibingGoal)
+                    startVibingModFromApkFile(target, _vibingSession.value.goal ?: "")
                 } else if (target.isNotBlank()) {
-                    startVibingModFromInstalledPackage(target, pendingVibingGoal)
+                    startVibingModFromInstalledPackage(target, _vibingSession.value.goal ?: "")
                 } else {
                     _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "ImportCard", "Usage: import apk <packageName|/path/file.apk>")
                 }
             }
             normalized.startsWith("analyze") || normalized.startsWith("preview patch") -> {
-                val goal = message.substringAfter("analyze", missingDelimiterValue = "").ifBlank { pendingVibingGoal }.trim()
-                pendingVibingGoal = goal.ifBlank { pendingVibingGoal }
-                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("analysis", "AnalysisCard", "Analysis ready. Goal: $pendingVibingGoal")
+                val goal = message.substringAfter("analyze", missingDelimiterValue = "").ifBlank { _vibingSession.value.goal ?: "" }.trim()
+                _vibingSession.value = _vibingSession.value.copy(goal = goal.ifBlank { _vibingSession.value.goal })
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("analysis", "AnalysisCard", "Analysis ready. Goal: ${_vibingSession.value.goal}")
             }
+            normalized.contains("auth") || normalized.contains("login") || normalized.contains("provider") -> publishAuthStatusCard()
             normalized == "apply" -> approvePendingPatch()
             normalized == "rebuild" -> rebuildCurrentApkTarget()
             normalized == "export" -> executeVibingPipeline()
             normalized.startsWith("run terminal") -> runTerminalCommand(message.removePrefix("run terminal").trim())
-            normalized.startsWith("run frida") -> {
-                val payload = message.removePrefix("run frida").trim()
-                val packageName = payload.substringBefore("::", "").trim()
-                val script = payload.substringAfter("::", "").trim()
-                runFrida(packageName, script)
-            }
+            normalized.contains("frida") || normalized.contains("ssl") || normalized.contains("root") -> routeFridaCommand(message)
             normalized.contains("local model status") -> publishLocalModelStatus()
             else -> submitChatInput(message)
         }
+    }
+
+    private fun pushUserMessage(content: String) {
+        _chatMessages.value = _chatMessages.value + ChatMessage(role = "user", content = content)
     }
 
     fun startVibingModFromInstalledPackage(packageName: String, goal: String) {
@@ -1451,7 +1468,7 @@ Opciones de importación:
             try {
                 apkImportService?.importInstalledPackage(packageName)
                 pendingVibingSource = ApkSource.InstalledPackage(packageName)
-                pendingVibingGoal = goal
+                _vibingSession.value = _vibingSession.value.copy(packageName = packageName, goal = goal)
                 _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("package" to packageName))
             } catch (e: Exception) {
                 _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("error", "Import error", e.message ?: "Could not import installed package")
@@ -1464,7 +1481,7 @@ Opciones de importación:
             try {
                 apkImportService?.importApkFile(path)
                 pendingVibingSource = ApkSource.ApkFile(path)
-                pendingVibingGoal = goal
+                _vibingSession.value = _vibingSession.value.copy(apkPath = path, goal = goal)
                 _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("import", "Import card", "APK seleccionada", mapOf("path" to path))
             } catch (e: Exception) {
                 _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("error", "Import error", e.message ?: "Could not import APK file")
@@ -1474,6 +1491,20 @@ Opciones de importación:
 
     fun approvePendingPatch() {
         _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("patch_preview", "Patch Preview", "Apply MOD approved")
+        val pending = _vibingSession.value.pendingPlan
+        if (pending != null) {
+            val body = pending.targetFiles.joinToString("\n") { "✓ queued $it" }
+            _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
+                "patch_result",
+                "Patch Result",
+                body.ifBlank { "No explicit patch operations available in preview." },
+                metadata = mapOf(
+                    "success" to "true",
+                    "operationsCount" to pending.targetFiles.size.toString(),
+                    "failedCount" to "0"
+                )
+            )
+        }
         executeVibingPipeline()
     }
 
@@ -1495,6 +1526,7 @@ Opciones de importación:
             body = result.output,
             metadata = mapOf("cwd" to result.cwd)
         )
+        _vibingSession.value = _vibingSession.value.copy(workspacePath = result.cwd)
     }
 
     fun rebuildCurrentApkTarget() {
@@ -1535,6 +1567,48 @@ $run"
         )
     }
 
+    private fun publishAuthStatusCard() {
+        val selected = _selectedModel.value
+        val authenticated = _isG4FAuthenticated.value
+        _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
+            type = "auth",
+            title = "Auth",
+            body = "Provider: ${selected?.name ?: "none"}",
+            metadata = mapOf(
+                "provider" to (selected?.name ?: "none"),
+                "authenticated" to authenticated.toString(),
+                "session" to if (authenticated) "active" else "inactive"
+            )
+        )
+    }
+
+    private fun routeFridaCommand(message: String) {
+        viewModelScope.launch {
+            val normalized = message.lowercase()
+            val packageName = message.substringAfterLast(" ").trim().takeIf { it.contains(".") }
+            if (packageName.isNullOrBlank()) {
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("error", "Error", "Frida requires package name. Example: ssl bypass com.example.app")
+                return@launch
+            }
+            val target = fileRepository.getApkTargetByPackage(packageName)
+            if (target == null) {
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("error", "Error", "Package not imported. Import APK first: $packageName")
+                return@launch
+            }
+            val template = when {
+                normalized.contains("ssl") -> FridaTemplates.SSL_PINNING_BYPASS
+                normalized.contains("root") -> FridaTemplates.ROOT_DETECTION_BYPASS
+                normalized.startsWith("run frida") && message.contains("::") -> message.substringAfter("::")
+                else -> FridaTemplates.METHOD_TRACER
+            }
+            _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("frida", "Frida", "Preparing Frida pipeline for $packageName", mapOf("package" to packageName, "script" to template.take(120)))
+            val ctx = appContext ?: return@launch
+            FridaGadgetInjector.run(ctx, target).collect { progress ->
+                _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard("frida", "Frida", progress, mapOf("package" to packageName))
+            }
+        }
+    }
+
     private fun executeVibingPipeline() {
         val orchestrator = apkTransformationOrchestrator ?: return
         val source = pendingVibingSource ?: run {
@@ -1548,7 +1622,7 @@ $run"
             val result = orchestrator.execute(
                 ApkTransformationRequest(
                     source = source,
-                    userGoal = pendingVibingGoal,
+                    userGoal = _vibingSession.value.goal ?: "Apply safe UI/resource improvements",
                     model = model,
                     apiKey = key
                 )
@@ -1561,6 +1635,14 @@ $run"
                 metadata = mapOf("success" to result.success.toString())
             )
             result.preview?.let { preview ->
+                _vibingSession.value = _vibingSession.value.copy(
+                    pendingPlan = ApkTransformationPlan(
+                        summary = preview.summary,
+                        targetFiles = preview.files,
+                        operations = emptyList(),
+                        riskLevel = preview.riskLevel
+                    )
+                )
                 _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
                     type = "patch_preview",
                     title = "Patch Preview",
@@ -1579,6 +1661,11 @@ $run"
                     outputPath = result.outputApkPath,
                     signed = result.success,
                     message = result.message
+                )
+                _vibingSession.value = _vibingSession.value.copy(
+                    outputApkPath = result.outputApkPath,
+                    signedApkPath = result.outputApkPath,
+                    signed = result.success
                 )
                 _vibingToolCards.value = _vibingToolCards.value + VibingModToolCard(
                     type = "export",

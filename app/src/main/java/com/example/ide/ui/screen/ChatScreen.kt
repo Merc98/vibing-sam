@@ -85,6 +85,16 @@ fun ChatScreen(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            if (chatMessages.isEmpty() && cards.isEmpty()) {
+                item {
+                    OutlinedCard {
+                        Column(Modifier.padding(12.dp)) {
+                            Text("Vibing MOD Agent", fontWeight = FontWeight.SemiBold)
+                            Text("Try: import apk /path/app.apk, analyze, apply, rebuild, export")
+                        }
+                    }
+                }
+            }
             items(chatMessages) { ChatMessageItem(it) }
             items(cards) { card -> VibingCardRenderer(card, viewModel) }
             if (uiState.isLoading) {
@@ -126,14 +136,19 @@ private fun VibingCardRenderer(card: VibingModToolCard, viewModel: MainViewModel
             onApply = { viewModel.approvePendingPatch() },
             onReject = { viewModel.rejectPendingPatch() }
         )
+        "patch_result" -> PatchResultCard(card)
         "build" -> BuildCard(card)
         "export" -> ExportCard(card)
         "terminal" -> TerminalOutputCard(card)
         "local_model" -> LocalModelCard(card)
         "frida" -> FridaCard(card)
-        else -> OutlinedCard { Text("${card.title}: ${card.body}", modifier = Modifier.padding(12.dp)) }
+        "auth" -> AuthCard(card)
+        "error" -> ErrorCard(card)
+        else -> GenericToolCard(card)
     }
 }
+@Composable
+fun GenericToolCard(card: VibingModToolCard) = OutlinedCard { Text("${card.title}: ${card.body}", modifier = Modifier.padding(12.dp)) }
 
 @Composable
 fun ImportCard(card: VibingModToolCard) = OutlinedCard {
@@ -173,6 +188,17 @@ fun BuildCard(card: VibingModToolCard) = OutlinedCard {
         Text("Rebuild MOD APK", fontWeight = FontWeight.SemiBold)
         Text(card.body, fontFamily = FontFamily.Monospace)
         card.metadata.forEach { (k, v) -> Text("$k: $v", style = MaterialTheme.typography.bodySmall) }
+    }
+}
+
+@Composable
+fun PatchResultCard(card: VibingModToolCard) = OutlinedCard {
+    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Patch Result", fontWeight = FontWeight.SemiBold)
+        Text(card.body, fontFamily = FontFamily.Monospace)
+        Text("success: ${card.metadata["success"] ?: "false"}")
+        Text("operations: ${card.metadata["operationsCount"] ?: "0"}")
+        Text("failed: ${card.metadata["failedCount"] ?: "0"}")
     }
 }
 
@@ -222,5 +248,26 @@ fun FridaCard(card: VibingModToolCard) = OutlinedCard {
     Column(Modifier.padding(12.dp)) {
         Text("Frida", fontWeight = FontWeight.SemiBold)
         Text(card.body)
+        card.metadata["package"]?.let { Text("package: $it") }
+        card.metadata["script"]?.let { Text("script: $it", style = MaterialTheme.typography.bodySmall) }
+    }
+}
+
+@Composable
+fun AuthCard(card: VibingModToolCard) = OutlinedCard {
+    Column(Modifier.padding(12.dp)) {
+        Text("Auth", fontWeight = FontWeight.SemiBold)
+        Text(card.body)
+        Text("provider: ${card.metadata["provider"] ?: "none"}")
+        Text("authenticated: ${card.metadata["authenticated"] ?: "false"}")
+        Text("session: ${card.metadata["session"] ?: "inactive"}")
+    }
+}
+
+@Composable
+fun ErrorCard(card: VibingModToolCard) = OutlinedCard {
+    Column(Modifier.padding(12.dp)) {
+        Text("Error", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+        Text(card.body, color = MaterialTheme.colorScheme.error)
     }
 }
